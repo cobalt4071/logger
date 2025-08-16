@@ -171,9 +171,9 @@ const WorkoutTracker = ({
       setCurrentWorkoutName(workoutNameInput.trim());
       showSnackbar(`Workout name updated to "${workoutNameInput.trim()}"!`, 'success');
     } else {
-      setCurrentWorkoutName(workoutNameInput.trim());
+      setCurrentWorkoutName(workoutName.trim());
       setCurrentWorkoutBlocks([]);
-      showSnackbar(`Workout "${workoutNameInput.trim()}" started!`, 'success');
+      showSnackbar(`Workout "${workoutName.trim()}" started!`, 'success');
     }
     setIsWorkoutNameDialogOpen(false);
   };
@@ -855,9 +855,6 @@ const WorkoutTracker = ({
 
           {/* New "Created Workouts" list (replaces the Accordion) */}
           <Box sx={{ mt: 4, mb: 2, p: 3, borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
-            <Typography variant="h6" sx={{ color: 'text.primary', mb: 2 }}>
-              Created Workouts
-            </Typography>
             <List sx={{ pt: 0 }}>
                 {createdWorkouts.length === 0 ? (
                   <Typography variant="body2" color="textSecondary">
