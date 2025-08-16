@@ -22,10 +22,14 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Tabs, // Import Tabs component
+  Tab,  // Import Tab component
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import FitnessCenterIcon from '@mui/icons-material/FitnessCenter'; // Icon for Workout tab
+import SettingsIcon from '@mui/icons-material/Settings'; // Icon for Settings tab
 
 // Import Firebase modules
 import { initializeApp } from "firebase/app";
@@ -44,9 +48,10 @@ import {
   GoogleAuthProvider, // Import GoogleAuthProvider
   signInWithPopup,    // Import signInWithPopup
   onAuthStateChanged,
-  // signInAnonymously, // No longer needed if using only Google Auth
-  // signInWithCustomToken // No longer needed for Google Auth
 } from "firebase/auth";
+
+// Import the new WorkoutTracker component
+import WorkoutTracker from './WorkoutTracker';
 
 
 // Your web app's Firebase configuration (provided by you)
@@ -67,7 +72,6 @@ const auth = getAuth(app);
 
 // Global variables for Canvas environment - MANDATORY to use
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-// let initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null; // Not needed with direct Google Auth
 
 
 // Define the dark theme
@@ -181,6 +185,9 @@ const App = () => {
   // State to track if auth is ready to fetch Firestore data
   const [isAuthReady, setIsAuthReady] = useState(false);
 
+  // New state for tab navigation: 'workout', 'sets', 'settings'
+  const [currentTab, setCurrentTab] = useState('sets');
+
 
   // 1. Firebase Authentication Setup
   useEffect(() => {
@@ -194,8 +201,7 @@ const App = () => {
         setUserId(null);
         setIsAuthReady(true); // Still set ready, even if no user, to allow unauthenticated state
         console.log("Auth state changed. No user signed in.");
-        // If no user, prompt for sign-in or provide option.
-        showSnackbar('Please sign in with Google to save your workouts.', 'info');
+        // If no user, showSnackbar is now handled directly in the Settings tab
       }
     });
 
@@ -241,9 +247,8 @@ const App = () => {
       // If auth is ready but no user (e.g., not signed in yet)
       // Clear workouts as no user data can be loaded.
       setPlannedWorkouts([]);
-      // showSnackbar('Please sign in to load your workout plan.', 'info'); // This might be too frequent
     }
-  }, [isAuthReady, userId]); // Depend on auth readiness and userId, db, appId for effect
+  }, [isAuthReady, userId, db, appId]); // Depend on auth readiness and userId, db, appId for effect
 
   // Function to show Snackbar notifications
   const showSnackbar = (message, severity) => {
@@ -378,6 +383,11 @@ const App = () => {
     workout.exercise.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Handle tab change
+  const handleTabChange = (event, newValue) => {
+    setCurrentTab(newValue);
+  };
+
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
@@ -386,122 +396,149 @@ const App = () => {
         <Box sx={{ my: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           {/* Main heading removed */}
         </Box>
-        {!userId ? (
-            <Box sx={{ mb: 3, textAlign: 'center' }}>
-                <Typography variant="body1" color="textSecondary" sx={{ mb: 2 }}>
-                    Sign in to save and load your workout plans.
-                </Typography>
-                <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={handleGoogleSignIn}
-                    sx={{ borderRadius: '8px', px: 4, py: 1.5 }}
-                >
-                    Sign In with Google
-                </Button>
+
+        {/* Conditional rendering based on currentTab */}
+        {currentTab === 'sets' && (
+          <Paper elevation={3} sx={{ p: 3, borderRadius: 2, position: 'relative' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6" sx={{ color: 'text.primary' }}>
+                Planned Sets
+              </Typography>
+              {/* Add Set button, now filled in blue */}
+              <IconButton
+                color="primary"
+                onClick={() => handleOpenForm(null)}
+                aria-label="plan new set"
+                disabled={!userId} // Disable if not signed in
+                sx={{
+                  borderRadius: '6px',
+                  backgroundColor: 'primary.main',
+                  padding: '6px',
+                  '&:hover': {
+                    backgroundColor: 'primary.dark',
+                  },
+                }}
+              >
+                <AddCircleOutlineIcon fontSize="medium" sx={{ color: darkTheme.palette.background.paper }}/>
+              </IconButton>
             </Box>
-        ) : (
-          <Typography variant="caption" color="textSecondary" sx={{ mb: 2, textAlign: 'center', display: 'block' }}>
-            User ID: {userId}
-          </Typography>
+
+            {/* Search Bar */}
+            <TextField
+              label="Search Set"
+              variant="outlined"
+              fullWidth
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              sx={{ mb: 3 }}
+              disabled={!userId} // Disable if not signed in
+            />
+
+            {filteredWorkouts.length === 0 && plannedWorkouts.length > 0 && searchQuery !== '' ? (
+              <Typography variant="body1" color="textSecondary" sx={{ textAlign: 'center', mt: 2 }}>
+                No matching sets found for "{searchQuery}".
+              </Typography>
+            ) : filteredWorkouts.length === 0 && (!userId || plannedWorkouts.length === 0) ? (
+              <Typography variant="body1" color="textSecondary" sx={{ textAlign: 'center', mt: 2 }}>
+                {userId ? 'No workouts planned yet. Click the \'+\' button to get started!' : 'Sign in to view and save your planned workouts.'}
+              </Typography>
+            ) : (
+              <TableContainer>
+                <Table aria-label="planned workout table">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Exercise</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>Sets</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>Reps</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>Weight (kg)</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>Rest (s)</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 'bold' }}>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {/* Map over filteredWorkouts to display each entry */}
+                    {filteredWorkouts.map((row) => (
+                      <TableRow key={row.id}>
+                        <TableCell component="th" scope="row">
+                          {row.exercise}
+                        </TableCell>
+                        <TableCell align="right">{row.sets}</TableCell>
+                        <TableCell align="right">{row.reps}</TableCell>
+                        <TableCell align="right">{row.weight}</TableCell>
+                        <TableCell align="right">{row.restTime}</TableCell>
+                        <TableCell align="center">
+                          <IconButton
+                            aria-label="edit"
+                            color="primary"
+                            onClick={() => handleOpenForm(row)}
+                            size="small"
+                            disabled={!userId} // Disable if not signed in
+                            sx={{ mr: 1 }}
+                          >
+                            <EditIcon />
+                          </IconButton>
+                          <IconButton
+                            aria-label="delete"
+                            color="error"
+                            onClick={() => deletePlannedWorkout(row.id)}
+                            size="small"
+                            disabled={!userId} // Disable if not signed in
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </Paper>
         )}
 
-        {/* Planned Workouts List */}
-        <Paper elevation={3} sx={{ p: 3, borderRadius: 2, position: 'relative' }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6" sx={{ color: 'text.primary' }}>
-              Planned Sets
-            </Typography>
-            {/* Add Set button, now filled in blue */}
-            <IconButton
-              color="primary"
-              onClick={() => handleOpenForm(null)}
-              aria-label="plan new set"
-              disabled={!userId} // Disable if not signed in
-              sx={{
-                borderRadius: '6px',
-                backgroundColor: 'primary.main',
-                padding: '6px',
-                '&:hover': {
-                  backgroundColor: 'primary.dark',
-                },
-              }}
-            >
-              <AddCircleOutlineIcon fontSize="medium" sx={{ color: darkTheme.palette.background.paper }}/>
-            </IconButton>
-          </Box>
-
-          {/* Search Bar */}
-          <TextField
-            label="Search Set"
-            variant="outlined"
-            fullWidth
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            sx={{ mb: 3 }}
-            disabled={!userId} // Disable if not signed in
+        {currentTab === 'workout' && (
+          <WorkoutTracker
+            userId={userId}
+            appId={appId}
+            db={db}
+            plannedWorkouts={plannedWorkouts}
+            showSnackbar={showSnackbar}
           />
+        )}
 
-          {filteredWorkouts.length === 0 && plannedWorkouts.length > 0 && searchQuery !== '' ? (
-            <Typography variant="body1" color="textSecondary" sx={{ textAlign: 'center', mt: 2 }}>
-              No matching sets found for "{searchQuery}".
+        {currentTab === 'settings' && (
+          <Paper elevation={3} sx={{ p: 3, borderRadius: 2, textAlign: 'center' }}>
+            <SettingsIcon sx={{ fontSize: 60, color: 'secondary.main', mb: 2 }} />
+            <Typography variant="h6" sx={{ color: 'text.primary', mb: 1 }}>
+              Settings
             </Typography>
-          ) : filteredWorkouts.length === 0 && (!userId || plannedWorkouts.length === 0) ? (
-            <Typography variant="body1" color="textSecondary" sx={{ textAlign: 'center', mt: 2 }}>
-              {userId ? 'No workouts planned yet. Click the \'+\' button to get started!' : 'Sign in to view and save your planned workouts.'}
+            <Typography variant="body1" color="textSecondary" sx={{ mb: 3 }}>
+              Manage app preferences and user profile here.
             </Typography>
-          ) : (
-            <TableContainer>
-              <Table aria-label="planned workout table">
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Exercise</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>Sets</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>Reps</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>Weight (kg)</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>Rest (s)</TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {/* Map over filteredWorkouts to display each entry */}
-                  {filteredWorkouts.map((row) => (
-                    <TableRow key={row.id}>
-                      <TableCell component="th" scope="row">
-                        {row.exercise}
-                      </TableCell>
-                      <TableCell align="right">{row.sets}</TableCell>
-                      <TableCell align="right">{row.reps}</TableCell>
-                      <TableCell align="right">{row.weight}</TableCell>
-                      <TableCell align="right">{row.restTime}</TableCell>
-                      <TableCell align="center">
-                        <IconButton
-                          aria-label="edit"
-                          color="primary"
-                          onClick={() => handleOpenForm(row)}
-                          size="small"
-                          disabled={!userId} // Disable if not signed in
-                          sx={{ mr: 1 }}
-                        >
-                          <EditIcon />
-                        </IconButton>
-                        <IconButton
-                          aria-label="delete"
-                          color="error"
-                          onClick={() => deletePlannedWorkout(row.id)}
-                          size="small"
-                          disabled={!userId} // Disable if not signed in
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-        </Paper>
+
+            {/* Google Sign-In button moved here */}
+            {!userId ? (
+                <Box sx={{ mb: 3, textAlign: 'center' }}>
+                    <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                        Sign in with Google to save your workout plans and access all features.
+                    </Typography>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={handleGoogleSignIn}
+                        sx={{ borderRadius: '8px', px: 4, py: 1.5 }}
+                    >
+                        Sign In with Google
+                    </Button>
+                </Box>
+            ) : (
+                <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                    You are signed in. User ID: <strong>{userId}</strong>
+                </Typography>
+            )}
+            {/* Future settings options will go here */}
+          </Paper>
+        )}
 
 
         {/* The Modal/Prompt for planning a new set or editing an existing one */}
@@ -537,6 +574,7 @@ const App = () => {
                 onChange={(e) => setSets(e.target.value)}
                 inputProps={{ min: 1 }}
                 fullWidth
+
               />
               <TextField
                 label="Reps"
@@ -594,6 +632,80 @@ const App = () => {
           </Alert>
         </Snackbar>
       </Container>
+
+      {/* Bottom Navigation Bar using Material-UI Tabs */}
+      <Paper sx={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        zIndex: 1000,
+        borderRadius: '12px 12px 0 0', // Rounded top corners only
+        bgcolor: 'background.paper',
+        py: 1,
+        boxShadow: '0px -2px 10px rgba(0, 0, 0, 0.3)', // Subtle shadow
+      }} elevation={5}>
+        <Tabs
+          value={currentTab}
+          onChange={handleTabChange}
+          indicatorColor="primary"
+          textColor="primary"
+          centered
+          sx={{
+            minHeight: '60px', // Ensure consistent height
+            '& .MuiTabs-indicator': {
+              height: '4px', // Thicker indicator
+              borderRadius: '2px', // Rounded indicator
+            },
+          }}
+        >
+          <Tab
+            label="Workout"
+            value="workout"
+            icon={<FitnessCenterIcon />}
+            sx={{
+              flexDirection: 'column',
+              fontSize: '0.75rem',
+              minWidth: 'auto', // Allow content to dictate width
+              px: 2, // Padding for better spacing
+              color: currentTab === 'workout' ? darkTheme.palette.primary.main : darkTheme.palette.text.secondary,
+              '&.Mui-selected': {
+                color: darkTheme.palette.primary.main,
+              },
+            }}
+          />
+          <Tab
+            label="Sets"
+            value="sets"
+            icon={<AddCircleOutlineIcon />}
+            sx={{
+              flexDirection: 'column',
+              fontSize: '0.75rem',
+              minWidth: 'auto',
+              px: 2,
+              color: currentTab === 'sets' ? darkTheme.palette.primary.main : darkTheme.palette.text.secondary,
+              '&.Mui-selected': {
+                color: darkTheme.palette.primary.main,
+              },
+            }}
+          />
+          <Tab
+            label="Settings"
+            value="settings"
+            icon={<SettingsIcon />}
+            sx={{
+              flexDirection: 'column',
+              fontSize: '0.75rem',
+              minWidth: 'auto',
+              px: 2,
+              color: currentTab === 'settings' ? darkTheme.palette.primary.main : darkTheme.palette.text.secondary,
+              '&.Mui-selected': {
+                color: darkTheme.palette.primary.main,
+              },
+            }}
+          />
+        </Tabs>
+      </Paper>
     </ThemeProvider>
   );
 };
