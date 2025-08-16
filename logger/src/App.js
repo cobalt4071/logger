@@ -154,7 +154,6 @@ const darkTheme = createTheme({
         },
       },
     },
-  },
 });
 
 // Main App component for creating and listing workout sets
@@ -268,7 +267,7 @@ const App = () => {
     }
   }, [isAuthReady, userId, showSnackbar]); // <-- Add showSnackbar here
 
-  // Function to show Snackbar notifications
+  // Define showSnackbar FIRST
   const showSnackbar = React.useCallback((message, severity) => {
     setSnackbarMessage(message);
     setSnackbarSeverity(severity);
