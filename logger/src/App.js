@@ -55,15 +55,15 @@ import {
 import WorkoutTracker from './WorkoutTracker';
 
 
-// Your web app's Firebase configuration (provided by you)
+// Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyB9f6MkvYWglCB_YTwJ7pzIBn_imyXmVJQ",
-  authDomain: "cobalt4071-logger.firebaseapp.com",
-  projectId: "cobalt4071-logger",
-  storageBucket: "cobalt4071-logger.firebasestorage.app",
-  messagingSenderId: "643454758270",
-  appId: "1:643454758270:web:284006db9753e146f0172f",
-  measurementId: "G-MR5H9ZVE34"
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID,
+  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
 };
 
 // Initialize Firebase
