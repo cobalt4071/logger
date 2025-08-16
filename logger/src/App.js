@@ -195,7 +195,61 @@ const App = () => {
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const timerIntervalRef = useRef(null);
   const sessionDocRef = useRef(null);
+  
+  // --- Stop Workout Handler ---
+  const handleStopWorkout = useCallback(async () => {
+    if (!userId) return;
+    await setDoc(sessionDocRef.current, { active: false }, { merge: true });
+    clearInterval(timerIntervalRef.current);
+    showSnackbar('Workout stopped.', 'info');
+  }, [userId, showSnackbar]);
 
+  // --- Advance Block Handler ---
+  const advanceToNextActiveBlock = useCallback(async () => {
+    const docSnap = await getDoc(sessionDocRef.current);
+    if (!docSnap.exists()) return;
+
+    const currentBlocks = docSnap.data().playbackBlocks;
+    const findActiveBlockIndex = currentBlocks.findIndex(block => block.status === 'active');
+    if (findActiveBlockIndex === -1) return;
+
+    const newPlaybackBlocks = [...currentBlocks];
+    newPlaybackBlocks[findActiveBlockIndex].status = 'completed';
+
+    const nextPendingNonNoteIndex = newPlaybackBlocks.findIndex((block, index) =>
+      index > findActiveBlockIndex && block.status === 'pending' && block.type !== 'note'
+    );
+
+    if (nextPendingNonNoteIndex !== -1) {
+      for (let i = findActiveBlockIndex + 1; i < nextPendingNonNoteIndex; i++) {
+        if (newPlaybackBlocks[i].type === 'note') {
+          newPlaybackBlocks[i].status = 'completed';
+          showSnackbar('Note skipped.', 'info');
+        }
+      }
+    }
+
+    if (nextPendingNonNoteIndex !== -1) {
+      newPlaybackBlocks[nextPendingNonNoteIndex].status = 'active';
+      const nextBlock = newPlaybackBlocks[nextPendingNonNoteIndex];
+      const updateData = { playbackBlocks: newPlaybackBlocks };
+
+      if (nextBlock.type === 'rest') {
+        updateData.timerSecondsLeft = nextBlock.duration;
+        updateData.initialRestDuration = nextBlock.duration;
+        updateData.isTimerRunning = true;
+      } else {
+        updateData.isTimerRunning = false;
+        updateData.timerSecondsLeft = 0;
+        updateData.initialRestDuration = 0;
+      }
+      await setDoc(sessionDocRef.current, updateData, { merge: true });
+    } else {
+      showSnackbar('Workout Complete! Great job!', 'success');
+      await handleStopWorkout();
+    }
+  }, [showSnackbar, handleStopWorkout]);
+  
   // 1. Firebase Authentication Setup
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -262,8 +316,7 @@ const App = () => {
     } else if (isAuthReady && !userId) {
       setPlannedWorkouts([]);
     }
-  }, [isAuthReady, userId, showSnackbar, db, appId]);
-
+  }, [isAuthReady, userId, showSnackbar]);
 
   // Effect to manage the timer countdown
   useEffect(() => {
@@ -426,53 +479,7 @@ const App = () => {
   const handleTabChange = (event, newValue) => {
     setCurrentTab(newValue);
   };
-
-  // --- Advance Block Handler ---
-  const advanceToNextActiveBlock = useCallback(async () => {
-    const docSnap = await getDoc(sessionDocRef.current);
-    if (!docSnap.exists()) return;
-
-    const currentBlocks = docSnap.data().playbackBlocks;
-    const findActiveBlockIndex = currentBlocks.findIndex(block => block.status === 'active');
-    if (findActiveBlockIndex === -1) return;
-
-    const newPlaybackBlocks = [...currentBlocks];
-    newPlaybackBlocks[findActiveBlockIndex].status = 'completed';
-
-    const nextPendingNonNoteIndex = newPlaybackBlocks.findIndex((block, index) =>
-      index > findActiveBlockIndex && block.status === 'pending' && block.type !== 'note'
-    );
-
-    if (nextPendingNonNoteIndex !== -1) {
-      for (let i = findActiveBlockIndex + 1; i < nextPendingNonNoteIndex; i++) {
-        if (newPlaybackBlocks[i].type === 'note') {
-          newPlaybackBlocks[i].status = 'completed';
-          showSnackbar('Note skipped.', 'info');
-        }
-      }
-    }
-
-    if (nextPendingNonNoteIndex !== -1) {
-      newPlaybackBlocks[nextPendingNonNoteIndex].status = 'active';
-      const nextBlock = newPlaybackBlocks[nextPendingNonNoteIndex];
-      const updateData = { playbackBlocks: newPlaybackBlocks };
-
-      if (nextBlock.type === 'rest') {
-        updateData.timerSecondsLeft = nextBlock.duration;
-        updateData.initialRestDuration = nextBlock.duration;
-        updateData.isTimerRunning = true;
-      } else {
-        updateData.isTimerRunning = false;
-        updateData.timerSecondsLeft = 0;
-        updateData.initialRestDuration = 0;
-      }
-      await setDoc(sessionDocRef.current, updateData, { merge: true });
-    } else {
-      showSnackbar('Workout Complete! Great job!', 'success');
-      await handleStopWorkout();
-    }
-  }, [showSnackbar, handleStopWorkout]);
-
+  
   // --- Block Completion Handler ---
   const handleBlockCompletion = async (index) => {
     const docSnap = await getDoc(sessionDocRef.current);
@@ -568,14 +575,6 @@ const App = () => {
     if (!docSnap.exists()) return;
     const currentStatus = docSnap.data().isTimerRunning;
     await setDoc(sessionDocRef.current, { isTimerRunning: !currentStatus }, { merge: true });
-  };
-
-  // --- Stop Workout Handler ---
-  const handleStopWorkout = async () => {
-    if (!userId) return;
-    await setDoc(sessionDocRef.current, { active: false }, { merge: true });
-    clearInterval(timerIntervalRef.current);
-    showSnackbar('Workout stopped.', 'info');
   };
 
   return (
