@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Container,
   Typography,
@@ -22,14 +22,14 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Tabs, // Import Tabs component
-  Tab,  // Import Tab component
+  Tabs,
+  Tab,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
-import FitnessCenterIcon from '@mui/icons-material/FitnessCenter'; // Icon for Workout tab
-import SettingsIcon from '@mui/icons-material/Settings'; // Icon for Settings tab
-import AddIcon from '@mui/icons-material/Add'; // Changed import
+import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
+import SettingsIcon from '@mui/icons-material/Settings';
+import AddIcon from '@mui/icons-material/Add';
 
 // Import Firebase modules
 import { initializeApp } from "firebase/app";
@@ -37,23 +37,22 @@ import {
   getFirestore,
   collection,
   query,
-  onSnapshot, // For real-time updates
+  onSnapshot,
   addDoc,
   setDoc,
   deleteDoc,
-  doc, // For referencing specific documents
+  doc,
 } from "firebase/firestore";
 import {
   getAuth,
-  GoogleAuthProvider, // Import GoogleAuthProvider
-  signInWithPopup,    // Import signInWithPopup
-  signOut,          // Import signOut for logout functionality
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut,
   onAuthStateChanged,
 } from "firebase/auth";
 
 // Import the new WorkoutTracker component
 import WorkoutTracker from './WorkoutTracker';
-
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -73,7 +72,6 @@ const auth = getAuth(app);
 
 // Global variables for Canvas environment - MANDATORY to use
 const appId = typeof window !== 'undefined' && window.__app_id ? window.__app_id : 'default-app-id';
-
 
 // Define the dark theme
 const darkTheme = createTheme({
@@ -154,41 +152,35 @@ const darkTheme = createTheme({
         },
       },
     },
-  }, // <-- Make sure this comma is present
-}); // <-- This should close the createTheme call
+  },
+});
 
 // Main App component for creating and listing workout sets
 const App = () => {
-  // State to hold the list of planned workout entries
   const [plannedWorkouts, setPlannedWorkouts] = useState([]);
-  // State for the current exercise being planned
   const [exercise, setExercise] = useState('');
-  // State for the current sets value
   const [sets, setSets] = useState('');
-  // State for the current reps value
   const [reps, setReps] = useState('');
-  // State for the current weight value
   const [weight, setWeight] = useState('');
-  // State for the current rest time value
   const [restTime, setRestTime] = useState('');
-  // State to control the visibility of the plan workout form modal
   const [isFormOpen, setIsFormOpen] = useState(false);
-  // State to store the ID of the workout being edited (null for new workout)
   const [editingWorkoutId, setEditingWorkoutId] = useState(null);
-  // State for Snackbar (for notifications)
+  const [searchQuery, setSearchQuery] = useState('');
+  const [userId, setUserId] = useState(null);
+  const [isAuthReady, setIsAuthReady] = useState(false);
+  const [currentTab, setCurrentTab] = useState('sets');
+
+  // --- Snackbar State and Function (Now only defined once) ---
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState('success');
-  // State for the search query
-  const [searchQuery, setSearchQuery] = useState('');
-  // State for user ID (for Firestore data separation)
-  const [userId, setUserId] = useState(null);
-  // State to track if auth is ready to fetch Firestore data
-  const [isAuthReady, setIsAuthReady] = useState(false);
 
-  // New state for tab navigation: 'workout', 'sets', 'settings'
-  const [currentTab, setCurrentTab] = useState('sets');
-
+  const showSnackbar = useCallback((message, severity) => {
+    setSnackbarMessage(message);
+    setSnackbarSeverity(severity);
+    setSnackbarOpen(true);
+  }, []);
+  // --- End Snackbar State and Function ---
 
   // --- Workout Playback Persistent State ---
   const [activeWorkoutSession, setActiveWorkoutSession] = useState(null);
@@ -200,23 +192,19 @@ const App = () => {
 
   // 1. Firebase Authentication Setup
   useEffect(() => {
-    // Listen for authentication state changes
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         setUserId(user.uid);
-        setIsAuthReady(true); // Auth is ready, can now fetch Firestore data
+        setIsAuthReady(true);
         console.log("Auth state changed. User ID:", user.uid);
       } else {
         setUserId(null);
-        setIsAuthReady(true); // Still set ready, even if no user, to allow unauthenticated state
+        setIsAuthReady(true);
         console.log("Auth state changed. No user signed in.");
-        // If no user, showSnackbar is now handled directly in the Settings tab
       }
     });
-
-    // Cleanup subscription on unmount
     return () => unsubscribe();
-  }, []); // Empty dependency array means this runs once on component mount
+  }, []);
 
   // Function to handle Google Sign-In
   const handleGoogleSignIn = async () => {
@@ -241,10 +229,8 @@ const App = () => {
     }
   };
 
-
   // 2. Load planned workouts from Firestore on auth ready
   useEffect(() => {
-    // Only fetch if auth is ready and userId is available
     if (isAuthReady && userId) {
       const workoutCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/plannedWorkouts`);
       const q = query(workoutCollectionRef);
@@ -260,24 +246,11 @@ const App = () => {
         console.error('Error fetching planned workouts from Firestore:', error);
         showSnackbar('Failed to load workout plan from cloud.', 'error');
       });
-
-      // Cleanup subscription on unmount or userId change
       return () => unsubscribe();
     } else if (isAuthReady && !userId) {
       setPlannedWorkouts([]);
     }
-  }, [isAuthReady, userId, showSnackbar]); // <-- Add showSnackbar here
-
-  // Define showSnackbar FIRST
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [snackbarSeverity, setSnackbarSeverity] = useState('success');
-
-  const showSnackbar = React.useCallback((message, severity) => {
-    setSnackbarMessage(message);
-    setSnackbarSeverity(severity);
-    setSnackbarOpen(true);
-  }, []);
+  }, [isAuthReady, userId, showSnackbar]);
 
   // Function to close Snackbar
   const handleCloseSnackbar = (event, reason) => {
@@ -290,7 +263,6 @@ const App = () => {
   // Functions to open and close the modal (these are still for planned sets)
   const handleOpenForm = (workoutToEdit = null) => {
     if (workoutToEdit) {
-      // If editing, populate fields and set editing ID
       setExercise(workoutToEdit.exercise);
       setSets(workoutToEdit.sets);
       setReps(workoutToEdit.reps);
@@ -298,7 +270,6 @@ const App = () => {
       setRestTime(workoutToEdit.restTime);
       setEditingWorkoutId(workoutToEdit.id);
     } else {
-      // If adding new, clear fields and reset editing ID
       setExercise('');
       setSets('');
       setReps('');
@@ -311,7 +282,6 @@ const App = () => {
 
   const handleCloseForm = () => {
     setIsFormOpen(false);
-    // Always clear fields and reset editing ID when closing
     setExercise('');
     setSets('');
     setReps('');
@@ -327,7 +297,6 @@ const App = () => {
       return;
     }
 
-    // Input validation (kept from previous version)
     if (!exercise.trim()) {
       showSnackbar('Exercise name cannot be empty.', 'warning');
       return;
@@ -355,18 +324,16 @@ const App = () => {
       reps: parseInt(reps),
       weight: parseFloat(weight),
       restTime: parseInt(restTime),
-      userId: userId, // Store the user ID with the workout
-      createdAt: Date.now(), // Timestamp for sorting
+      userId: userId,
+      createdAt: Date.now(),
     };
 
     try {
       if (editingWorkoutId) {
-        // Update existing document
         const workoutDocRef = doc(db, `artifacts/${appId}/users/${userId}/plannedWorkouts`, editingWorkoutId);
-        await setDoc(workoutDocRef, workoutData, { merge: true }); // Use setDoc with merge for partial updates
+        await setDoc(workoutDocRef, workoutDocRef, workoutData, { merge: true });
         showSnackbar('Workout plan updated in cloud!', 'success');
       } else {
-        // Add new document
         await addDoc(collection(db, `artifacts/${appId}/users/${userId}/plannedWorkouts`), workoutData);
         showSnackbar('Workout set planned and saved to cloud!', 'success');
       }
@@ -375,7 +342,6 @@ const App = () => {
       showSnackbar(`Failed to save workout: ${error.message}`, 'error');
     }
 
-    // Clear input fields and close modal
     setExercise('');
     setSets('');
     setReps('');
@@ -411,7 +377,7 @@ const App = () => {
   };
 
   // --- Advance Block Handler ---
-  const advanceToNextActiveBlock = React.useCallback(() => {
+  const advanceToNextActiveBlock = useCallback(() => {
     const findActiveBlockIndex = () => playbackBlocks.findIndex(block => block.status === 'active');
     const currentActiveIndex = findActiveBlockIndex();
     if (currentActiveIndex === -1) return;
@@ -540,22 +506,19 @@ const App = () => {
       <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
       <Container maxWidth="md">
         <Box sx={{ my: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          {/* Main heading removed */}
         </Box>
 
-        {/* Conditional rendering based on currentTab */}
         {currentTab === 'sets' && (
           <Paper elevation={3} sx={{ p: 3, borderRadius: 2, position: 'relative' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography variant="h6" sx={{ color: 'text.primary' }}>
                 Planned Sets
               </Typography>
-              {/* Add Set button, now filled in blue */}
               <IconButton
                 color="primary"
                 onClick={() => handleOpenForm(null)}
                 aria-label="plan new set"
-                disabled={!userId} // Disable if not signed in
+                disabled={!userId}
                 sx={{
                   borderRadius: '6px',
                   backgroundColor: 'primary.main',
@@ -569,7 +532,6 @@ const App = () => {
               </IconButton>
             </Box>
 
-            {/* Search Bar */}
             <TextField
               label="Search Set"
               variant="outlined"
@@ -577,7 +539,7 @@ const App = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               sx={{ mb: 3 }}
-              disabled={!userId} // Disable if not signed in
+              disabled={!userId}
             />
 
             {filteredWorkouts.length === 0 && plannedWorkouts.length > 0 && searchQuery !== '' ? (
@@ -602,7 +564,6 @@ const App = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {/* Map over filteredWorkouts to display each entry */}
                     {filteredWorkouts.map((row) => (
                       <TableRow key={row.id}>
                         <TableCell component="th" scope="row">
@@ -618,7 +579,7 @@ const App = () => {
                             color="primary"
                             onClick={() => handleOpenForm(row)}
                             size="small"
-                            disabled={!userId} // Disable if not signed in
+                            disabled={!userId}
                             sx={{ mr: 1 }}
                           >
                             <EditIcon />
@@ -628,7 +589,7 @@ const App = () => {
                             color="error"
                             onClick={() => deletePlannedWorkout(row.id)}
                             size="small"
-                            disabled={!userId} // Disable if not signed in
+                            disabled={!userId}
                           >
                             <DeleteIcon />
                           </IconButton>
@@ -649,7 +610,6 @@ const App = () => {
             db={db}
             plannedWorkouts={plannedWorkouts}
             showSnackbar={showSnackbar}
-            // Persistent workout session props
             activeWorkoutSession={activeWorkoutSession}
             playbackBlocks={playbackBlocks}
             timerSecondsLeft={timerSecondsLeft}
@@ -677,8 +637,6 @@ const App = () => {
             <Typography variant="body1" color="textSecondary" sx={{ mb: 3 }}>
               Manage app preferences and user profile here.
             </Typography>
-
-            {/* Conditional rendering for Sign In / Sign Out buttons */}
             {!userId ? (
                 <Box sx={{ mb: 3, textAlign: 'center' }}>
                     <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
@@ -708,12 +666,9 @@ const App = () => {
                     </Button>
                 </Box>
             )}
-            {/* Future settings options will go here */}
           </Paper>
         )}
 
-
-        {/* The Modal/Prompt for planning a new set or editing an existing one */}
         <Dialog open={isFormOpen} onClose={handleCloseForm} maxWidth="xs" fullWidth>
           <DialogTitle sx={{ textAlign: 'center', pb: 1, color: 'primary.main' }}>
             {editingWorkoutId ? 'Edit Workout Set' : 'Plan New Workout Set'}
@@ -746,7 +701,6 @@ const App = () => {
                 onChange={(e) => setSets(e.target.value)}
                 inputProps={{ min: 1 }}
                 fullWidth
-
               />
               <TextField
                 label="Reps"
@@ -797,7 +751,6 @@ const App = () => {
           </DialogActions>
         </Dialog>
 
-        {/* Snackbar for notifications */}
         <Snackbar open={snackbarOpen} autoHideDuration={3000} onClose={handleCloseSnackbar}>
           <Alert onClose={handleCloseSnackbar} severity={snackbarSeverity} sx={{ width: '100%' }}>
             {snackbarMessage}
@@ -805,17 +758,16 @@ const App = () => {
         </Snackbar>
       </Container>
 
-      {/* Bottom Navigation Bar using Material-UI Tabs */}
       <Paper sx={{
         position: 'fixed',
         bottom: 0,
         left: 0,
         right: 0,
         zIndex: 1000,
-        borderRadius: '12px 12px 0 0', // Rounded top corners only
+        borderRadius: '12px 12px 0 0',
         bgcolor: 'background.paper',
         py: 1,
-        boxShadow: '0px -2px 10px rgba(0, 0, 0, 0.3)', // Subtle shadow
+        boxShadow: '0px -2px 10px rgba(0, 0, 0, 0.3)',
       }} elevation={5}>
         <Tabs
           value={currentTab}
@@ -824,10 +776,10 @@ const App = () => {
           textColor="primary"
           centered
           sx={{
-            minHeight: '60px', // Ensure consistent height
+            minHeight: '60px',
             '& .MuiTabs-indicator': {
-              height: '4px', // Thicker indicator
-              borderRadius: '2px', // Rounded indicator
+              height: '4px',
+              borderRadius: '2px',
             },
           }}
         >
@@ -838,8 +790,8 @@ const App = () => {
             sx={{
               flexDirection: 'column',
               fontSize: '0.75rem',
-              minWidth: 'auto', // Allow content to dictate width
-              px: 2, // Padding for better spacing
+              minWidth: 'auto',
+              px: 2,
               color: currentTab === 'workout' ? darkTheme.palette.primary.main : darkTheme.palette.text.secondary,
               '&.Mui-selected': {
                 color: darkTheme.palette.primary.main,
