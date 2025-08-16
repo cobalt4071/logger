@@ -74,6 +74,21 @@ const WorkoutTracker = ({
   // State to store created workouts (fetched from Firestore)
   const [createdWorkouts, setCreatedWorkouts] = useState([]);
 
+  // Add missing refs
+  const timerIntervalRef = useRef(null);
+  const activeBlockRef = useRef(null);
+
+  // Add missing helper
+  const formatDate = (isoString) => {
+    return new Date(isoString).toLocaleString([], {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   // Effect to load created workouts from Firestore
   useEffect(() => {
     if (userId) {
