@@ -857,20 +857,14 @@ const WorkoutTracker = ({
             </DialogActions>
           </Dialog>
 
-          <Accordion sx={{ mt: 4, mb: 2, borderRadius: '8px' }} elevation={3}>
-            <AccordionSummary
-              expandIcon={<ExpandMoreIcon />}
-              aria-controls="panel1a-content"
-              id="panel1a-header"
-            >
-              <Typography variant="h6" sx={{ color: 'text.primary', flexGrow: 1 }}>
-                Created Workouts
-              </Typography>
-            </AccordionSummary>
-            <AccordionDetails sx={{ p: 0 }}>
-              <List sx={{ pt: 0 }}>
+          {/* New "Created Workouts" list (replaces the Accordion) */}
+          <Box sx={{ mt: 4, mb: 2, p: 3, borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <Typography variant="h6" sx={{ color: 'text.primary', mb: 2 }}>
+              Created Workouts
+            </Typography>
+            <List sx={{ pt: 0 }}>
                 {createdWorkouts.length === 0 ? (
-                  <Typography variant="body2" color="textSecondary" sx={{ px: 2, pb: 2 }}>
+                  <Typography variant="body2" color="textSecondary">
                     {userId ? 'No created workouts found.' : 'Sign in to see your created workouts.'}
                   </Typography>
                 ) : (
@@ -881,7 +875,7 @@ const WorkoutTracker = ({
                         borderBottom: '1px solid rgba(255,255,255,0.1)',
                         '&:last-child': { borderBottom: 'none' },
                         py: 1,
-                        px: 2,
+                        px: 0,
                         flexDirection: 'column',
                         alignItems: 'flex-start',
                       }}
@@ -938,8 +932,7 @@ const WorkoutTracker = ({
                   ))
                 )}
               </List>
-            </AccordionDetails>
-          </Accordion>
+            </Box>
         </>
       )}
     </Paper>
