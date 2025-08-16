@@ -504,6 +504,22 @@ const WorkoutTracker = ({ userId, appId, db, plannedWorkouts, showSnackbar }) =>
     });
   };
 
+  // Add pause/resume handler
+  const handlePauseResume = () => {
+    setIsTimerRunning((prev) => !prev);
+  };
+
+  // Add stop handler
+  const handleStopWorkout = () => {
+    clearInterval(timerIntervalRef.current);
+    setActiveWorkoutSession(null);
+    setPlaybackBlocks([]);
+    setIsTimerRunning(false);
+    setTimerSecondsLeft(0);
+    setInitialRestDuration(0);
+    showSnackbar('Workout stopped.', 'info');
+  };
+
   return (
     <Paper elevation={3} sx={{ p: 3, borderRadius: 2, position: 'relative' }}>
       {activeWorkoutSession ? (
@@ -672,7 +688,25 @@ const WorkoutTracker = ({ userId, appId, db, plannedWorkouts, showSnackbar }) =>
             </Typography>
           )}
 
-          <Box sx={{ mt: 3, textAlign: 'center' }}>
+          {/* Playback Controls */}
+          <Box sx={{ mt: 3, textAlign: 'center', display: 'flex', justifyContent: 'center', gap: 2 }}>
+            <Button
+              variant={isTimerRunning ? "outlined" : "contained"}
+              color="warning"
+              onClick={handlePauseResume}
+              sx={{ borderRadius: '8px', px: 4, py: 1.5 }}
+              disabled={initialRestDuration === 0}
+            >
+              {isTimerRunning ? 'Pause' : 'Resume'}
+            </Button>
+            <Button
+              variant="contained"
+              color="error"
+              onClick={handleStopWorkout}
+              sx={{ borderRadius: '8px', px: 4, py: 1.5 }}
+            >
+              Stop
+            </Button>
             <Button
               variant="contained"
               color="secondary"
