@@ -154,7 +154,8 @@ const darkTheme = createTheme({
         },
       },
     },
-});
+  }, // <-- Make sure this comma is present
+}); // <-- This should close the createTheme call
 
 // Main App component for creating and listing workout sets
 const App = () => {
