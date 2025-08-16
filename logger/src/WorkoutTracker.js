@@ -22,7 +22,11 @@ import {
   LinearProgress, // For timer progress bar
   Checkbox, // For set completion
   FormControlLabel, // For Checkbox label
+  Accordion, // New import for dropdown
+  AccordionSummary, // New import for dropdown
+  AccordionDetails, // New import for dropdown
 } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'; // New import for dropdown
 import AddIcon from '@mui/icons-material/Add';
 import ClearIcon from '@mui/icons-material/Clear'; // Corrected import path
 import NotesIcon from '@mui/icons-material/Notes';
@@ -558,7 +562,7 @@ const WorkoutTracker = ({
       ) : (
         // --- Workout Construction and Created Workouts List View (Existing UI) ---
         <>
-          {/* Main heading for "Created Workouts" section with "Create New Workout" button */}
+          {/* Main heading for "Planned Workouts" section with "Create New Workout" button */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6" sx={{ color: 'text.primary' }}>
               Planned Workouts
@@ -853,79 +857,79 @@ const WorkoutTracker = ({
             </DialogActions>
           </Dialog>
 
-          {/* New "Created Workouts" list (replaces the Accordion) */}
-          <Box sx={{ mt: 4, mb: 2, p: 3, borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
-            <List sx={{ pt: 0 }}>
-                {createdWorkouts.length === 0 ? (
-                  <Typography variant="body2" color="textSecondary">
+          {/* New "Created Workouts" list using Accordion */}
+          <Box sx={{ mt: 4, mb: 2, p: 1, borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
+            {createdWorkouts.length === 0 ? (
+                <Typography variant="body2" color="textSecondary" sx={{ px: 2, py: 1 }}>
                     {userId ? 'No created workouts found.' : 'Sign in to see your created workouts.'}
-                  </Typography>
-                ) : (
-                  createdWorkouts.map((workout) => (
-                    <ListItem
-                      key={workout.id}
-                      sx={{
-                        borderBottom: '1px solid rgba(255,255,255,0.1)',
-                        '&:last-child': { borderBottom: 'none' },
-                        py: 1,
-                        px: 0,
-                        flexDirection: 'column',
-                        alignItems: 'flex-start',
-                      }}
-                    >
-                      <Box sx={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Box sx={{ flexGrow: 1 }}>
-                          <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                            {workout.name}
-                          </Typography>
-                          <Typography variant="body2" color="textSecondary">
-                            {formatDate(workout.date)}
-                          </Typography>
-                        </Box>
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                          <IconButton
-                            aria-label="play"
-                            color="success"
-                            onClick={() => handleStartWorkoutSession(workout)}
-                            size="small"
-                          >
-                            <PlayArrowIcon />
-                          </IconButton>
-                          <IconButton
-                            aria-label="edit"
-                            color="primary"
-                            onClick={() => handleOpenWorkoutNameDialog(workout)}
-                            size="small"
-                          >
-                            <EditIcon />
-                          </IconButton>
-                          <IconButton
-                            aria-label="delete"
-                            color="error"
-                            onClick={() => deleteCreatedWorkout(workout.id)}
-                            size="small"
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </Box>
-                      </Box>
-                      <Box sx={{ width: '100%', mt: 1 }}>
-                        {workout.blocks.map((block, blockIndex) => (
-                          <Typography key={blockIndex} variant="body2" color="textSecondary" sx={{ ml: 1, my: 0.5 }}>
-                            - {block.type === 'plannedSet'
-                              ? `${block.plannedSetDetails.exercise}: ${block.plannedSetDetails.sets}x${block.plannedSetDetails.reps}`
-                              : block.type === 'rest'
-                              ? `Rest: ${block.duration}s`
-                              : `Note: "${block.text}"`
-                            }
-                          </Typography>
-                        ))}
-                      </Box>
-                    </ListItem>
-                  ))
-                )}
-              </List>
-            </Box>
+                </Typography>
+            ) : (
+                createdWorkouts.map((workout) => (
+                    <Accordion key={workout.id} sx={{ bgcolor: 'background.paper', my: 1, '&:before': { display: 'none' } }}>
+                        <AccordionSummary
+                            expandIcon={<ExpandMoreIcon sx={{ color: 'text.secondary' }} />}
+                            aria-controls={`panel-${workout.id}-content`}
+                            id={`panel-${workout.id}-header`}
+                            sx={{
+                                '& .MuiAccordionSummary-content': {
+                                    my: 0.5,
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                },
+                            }}
+                        >
+                            <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+                                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                                    {workout.name}
+                                </Typography>
+                                <Typography variant="body2" color="textSecondary" sx={{ ml: 1 }}>
+                                    {formatDate(workout.date)}
+                                </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', gap: 1, ml: 2 }}>
+                                <IconButton
+                                    aria-label="play"
+                                    color="success"
+                                    onClick={(e) => { e.stopPropagation(); handleStartWorkoutSession(workout); }}
+                                    size="small"
+                                >
+                                    <PlayArrowIcon />
+                                </IconButton>
+                                <IconButton
+                                    aria-label="edit"
+                                    color="primary"
+                                    onClick={(e) => { e.stopPropagation(); handleOpenWorkoutNameDialog(workout); }}
+                                    size="small"
+                                >
+                                    <EditIcon />
+                                </IconButton>
+                                <IconButton
+                                    aria-label="delete"
+                                    color="error"
+                                    onClick={(e) => { e.stopPropagation(); deleteCreatedWorkout(workout.id); }}
+                                    size="small"
+                                >
+                                    <DeleteIcon />
+                                </IconButton>
+                            </Box>
+                        </AccordionSummary>
+                        <AccordionDetails sx={{ pt: 0 }}>
+                            <Divider sx={{ my: 1, borderColor: 'rgba(255,255,255,0.1)' }} />
+                            {workout.blocks.map((block, blockIndex) => (
+                                <Typography key={blockIndex} variant="body2" color="textSecondary" sx={{ ml: 1, my: 0.5 }}>
+                                    - {block.type === 'plannedSet'
+                                        ? `${block.plannedSetDetails.exercise}: ${block.plannedSetDetails.sets}x${block.plannedSetDetails.reps}`
+                                        : block.type === 'rest'
+                                        ? `Rest: ${block.duration}s`
+                                        : `Note: "${block.text}"`
+                                    }
+                                </Typography>
+                            ))}
+                        </AccordionDetails>
+                    </Accordion>
+                ))
+            )}
+          </Box>
         </>
       )}
     </Paper>
