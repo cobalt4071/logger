@@ -269,6 +269,10 @@ const App = () => {
   }, [isAuthReady, userId, showSnackbar]); // <-- Add showSnackbar here
 
   // Define showSnackbar FIRST
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarSeverity, setSnackbarSeverity] = useState('success');
+
   const showSnackbar = React.useCallback((message, severity) => {
     setSnackbarMessage(message);
     setSnackbarSeverity(severity);
