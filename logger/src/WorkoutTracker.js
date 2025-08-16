@@ -171,9 +171,9 @@ const WorkoutTracker = ({
       setCurrentWorkoutName(workoutNameInput.trim());
       showSnackbar(`Workout name updated to "${workoutNameInput.trim()}"!`, 'success');
     } else {
-      setCurrentWorkoutName(workoutName.trim());
+      setCurrentWorkoutName(workoutNameInput.trim());
       setCurrentWorkoutBlocks([]);
-      showSnackbar(`Workout "${workoutName.trim()}" started!`, 'success');
+      showSnackbar(`Workout "${workoutNameInput.trim()}" started!`, 'success');
     }
     setIsWorkoutNameDialogOpen(false);
   };
