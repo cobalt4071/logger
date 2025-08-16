@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Container,
   Typography,
@@ -30,6 +30,10 @@ import EditIcon from '@mui/icons-material/Edit';
 import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
 import SettingsIcon from '@mui/icons-material/Settings';
 import AddIcon from '@mui/icons-material/Add';
+import TimerIcon from '@mui/icons-material/Timer';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import StopIcon from '@mui/icons-material/Stop';
+import PauseIcon from '@mui/icons-material/Pause';
 
 // Import Firebase modules
 import { initializeApp } from "firebase/app";
@@ -42,6 +46,7 @@ import {
   setDoc,
   deleteDoc,
   doc,
+  getDoc,
 } from "firebase/firestore";
 import {
   getAuth,
@@ -182,13 +187,14 @@ const App = () => {
   }, []);
   // --- End Snackbar State and Function ---
 
-  // --- Workout Playback Persistent State ---
+  // --- Workout Playback Persistent State using Firestore ---
   const [activeWorkoutSession, setActiveWorkoutSession] = useState(null);
   const [playbackBlocks, setPlaybackBlocks] = useState([]);
   const [timerSecondsLeft, setTimerSecondsLeft] = useState(0);
   const [initialRestDuration, setInitialRestDuration] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const timerIntervalRef = React.useRef(null);
+  const timerIntervalRef = useRef(null);
+  const sessionDocRef = useRef(null);
 
   // 1. Firebase Authentication Setup
   useEffect(() => {
@@ -205,6 +211,74 @@ const App = () => {
     });
     return () => unsubscribe();
   }, []);
+
+  // 2. Load planned workouts and set up listener for active session
+  useEffect(() => {
+    if (isAuthReady && userId) {
+      // Setup Firestore reference for the active session
+      sessionDocRef.current = doc(db, `artifacts/${appId}/users/${userId}/activeSession/state`);
+
+      // Set up real-time listener for the active session state
+      const unsubscribeSession = onSnapshot(sessionDocRef.current, (docSnap) => {
+        if (docSnap.exists() && docSnap.data().active) {
+          const data = docSnap.data();
+          setActiveWorkoutSession(data.activeWorkoutSession);
+          setPlaybackBlocks(data.playbackBlocks || []);
+          setTimerSecondsLeft(data.timerSecondsLeft || 0);
+          setInitialRestDuration(data.initialRestDuration || 0);
+          setIsTimerRunning(data.isTimerRunning || false);
+        } else {
+          setActiveWorkoutSession(null);
+          setPlaybackBlocks([]);
+          setTimerSecondsLeft(0);
+          setInitialRestDuration(0);
+          setIsTimerRunning(false);
+        }
+      }, (error) => {
+        console.error('Error fetching active workout session from Firestore:', error);
+      });
+
+      // Load planned workouts
+      const workoutCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/plannedWorkouts`);
+      const q = query(workoutCollectionRef);
+
+      const unsubscribeWorkouts = onSnapshot(q, (snapshot) => {
+        const workouts = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setPlannedWorkouts(workouts);
+        showSnackbar('Workout plan loaded from cloud!', 'success');
+      }, (error) => {
+        console.error('Error fetching planned workouts from Firestore:', error);
+        showSnackbar('Failed to load workout plan from cloud.', 'error');
+      });
+
+      // Cleanup subscriptions on unmount or user change
+      return () => {
+        unsubscribeSession();
+        unsubscribeWorkouts();
+      };
+    } else if (isAuthReady && !userId) {
+      setPlannedWorkouts([]);
+    }
+  }, [isAuthReady, userId, showSnackbar, db, appId]);
+
+
+  // Effect to manage the timer countdown
+  useEffect(() => {
+    if (isTimerRunning && timerSecondsLeft > 0) {
+      timerIntervalRef.current = setInterval(async () => {
+        const newTime = timerSecondsLeft - 1;
+        await setDoc(sessionDocRef.current, { timerSecondsLeft: newTime }, { merge: true });
+      }, 1000);
+    } else if (timerSecondsLeft === 0 && isTimerRunning) {
+      clearInterval(timerIntervalRef.current);
+      advanceToNextActiveBlock();
+    }
+    // Cleanup function to clear the interval
+    return () => clearInterval(timerIntervalRef.current);
+  }, [isTimerRunning, timerSecondsLeft, advanceToNextActiveBlock]);
 
   // Function to handle Google Sign-In
   const handleGoogleSignIn = async () => {
@@ -228,29 +302,6 @@ const App = () => {
       showSnackbar(`Sign-out failed: ${error.message}`, 'error');
     }
   };
-
-  // 2. Load planned workouts from Firestore on auth ready
-  useEffect(() => {
-    if (isAuthReady && userId) {
-      const workoutCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/plannedWorkouts`);
-      const q = query(workoutCollectionRef);
-
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const workouts = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setPlannedWorkouts(workouts);
-        showSnackbar('Workout plan loaded from cloud!', 'success');
-      }, (error) => {
-        console.error('Error fetching planned workouts from Firestore:', error);
-        showSnackbar('Failed to load workout plan from cloud.', 'error');
-      });
-      return () => unsubscribe();
-    } else if (isAuthReady && !userId) {
-      setPlannedWorkouts([]);
-    }
-  }, [isAuthReady, userId, showSnackbar]);
 
   // Function to close Snackbar
   const handleCloseSnackbar = (event, reason) => {
@@ -331,7 +382,7 @@ const App = () => {
     try {
       if (editingWorkoutId) {
         const workoutDocRef = doc(db, `artifacts/${appId}/users/${userId}/plannedWorkouts`, editingWorkoutId);
-        await setDoc(workoutDocRef, workoutDocRef, workoutData, { merge: true });
+        await setDoc(workoutDocRef, workoutData, { merge: true });
         showSnackbar('Workout plan updated in cloud!', 'success');
       } else {
         await addDoc(collection(db, `artifacts/${appId}/users/${userId}/plannedWorkouts`), workoutData);
@@ -377,20 +428,23 @@ const App = () => {
   };
 
   // --- Advance Block Handler ---
-  const advanceToNextActiveBlock = useCallback(() => {
-    const findActiveBlockIndex = () => playbackBlocks.findIndex(block => block.status === 'active');
-    const currentActiveIndex = findActiveBlockIndex();
-    if (currentActiveIndex === -1) return;
+  const advanceToNextActiveBlock = useCallback(async () => {
+    const docSnap = await getDoc(sessionDocRef.current);
+    if (!docSnap.exists()) return;
 
-    const newPlaybackBlocks = [...playbackBlocks];
-    newPlaybackBlocks[currentActiveIndex].status = 'completed';
+    const currentBlocks = docSnap.data().playbackBlocks;
+    const findActiveBlockIndex = currentBlocks.findIndex(block => block.status === 'active');
+    if (findActiveBlockIndex === -1) return;
+
+    const newPlaybackBlocks = [...currentBlocks];
+    newPlaybackBlocks[findActiveBlockIndex].status = 'completed';
 
     const nextPendingNonNoteIndex = newPlaybackBlocks.findIndex((block, index) =>
-      index > currentActiveIndex && block.status === 'pending' && block.type !== 'note'
+      index > findActiveBlockIndex && block.status === 'pending' && block.type !== 'note'
     );
 
     if (nextPendingNonNoteIndex !== -1) {
-      for (let i = currentActiveIndex + 1; i < nextPendingNonNoteIndex; i++) {
+      for (let i = findActiveBlockIndex + 1; i < nextPendingNonNoteIndex; i++) {
         if (newPlaybackBlocks[i].type === 'note') {
           newPlaybackBlocks[i].status = 'completed';
           showSnackbar('Note skipped.', 'info');
@@ -401,36 +455,47 @@ const App = () => {
     if (nextPendingNonNoteIndex !== -1) {
       newPlaybackBlocks[nextPendingNonNoteIndex].status = 'active';
       const nextBlock = newPlaybackBlocks[nextPendingNonNoteIndex];
+      const updateData = { playbackBlocks: newPlaybackBlocks };
+
       if (nextBlock.type === 'rest') {
-        setTimerSecondsLeft(nextBlock.duration);
-        setInitialRestDuration(nextBlock.duration);
-        setIsTimerRunning(true);
+        updateData.timerSecondsLeft = nextBlock.duration;
+        updateData.initialRestDuration = nextBlock.duration;
+        updateData.isTimerRunning = true;
       } else {
-        setIsTimerRunning(false);
-        setTimerSecondsLeft(0);
-        setInitialRestDuration(0);
+        updateData.isTimerRunning = false;
+        updateData.timerSecondsLeft = 0;
+        updateData.initialRestDuration = 0;
       }
-      setPlaybackBlocks(newPlaybackBlocks);
+      await setDoc(sessionDocRef.current, updateData, { merge: true });
     } else {
       showSnackbar('Workout Complete! Great job!', 'success');
-      setActiveWorkoutSession(null);
-      setPlaybackBlocks([]);
-      clearInterval(timerIntervalRef.current);
-      setIsTimerRunning(false);
-      setTimerSecondsLeft(0);
-      setInitialRestDuration(0);
+      await handleStopWorkout();
     }
-  }, [playbackBlocks, showSnackbar]);
+  }, [showSnackbar, handleStopWorkout]);
 
   // --- Block Completion Handler ---
-  const handleBlockCompletion = (index) => {
-    const blockToComplete = playbackBlocks[index];
+  const handleBlockCompletion = async (index) => {
+    const docSnap = await getDoc(sessionDocRef.current);
+    if (!docSnap.exists()) return;
+
+    const currentBlocks = docSnap.data().playbackBlocks;
+    const blockToComplete = currentBlocks[index];
     if (blockToComplete.status !== 'active') return;
+
+    const newBlocks = [...currentBlocks];
+    newBlocks[index].status = 'completed';
+    await setDoc(sessionDocRef.current, { playbackBlocks: newBlocks }, { merge: true });
+
     advanceToNextActiveBlock();
   };
 
   // --- Start Workout Handler ---
-  const handleStartWorkoutSession = (workout) => {
+  const handleStartWorkoutSession = async (workout) => {
+    if (!userId) {
+      showSnackbar('Please sign in to start a workout.', 'warning');
+      return;
+    }
+
     const flattenedBlocks = [];
     workout.blocks.forEach((block) => {
       if (block.type === 'plannedSet') {
@@ -470,33 +535,46 @@ const App = () => {
       flattenedBlocks[firstActiveIndex].status = 'active';
       const firstActiveBlock = flattenedBlocks[firstActiveIndex];
       if (firstActiveBlock.type === 'rest') {
-        setTimerSecondsLeft(firstActiveBlock.duration);
-        setInitialRestDuration(firstActiveBlock.duration);
-        setIsTimerRunning(true);
+        await setDoc(sessionDocRef.current, {
+          active: true,
+          activeWorkoutSession: workout,
+          playbackBlocks: flattenedBlocks,
+          timerSecondsLeft: firstActiveBlock.duration,
+          initialRestDuration: firstActiveBlock.duration,
+          isTimerRunning: true,
+        });
+      } else {
+        await setDoc(sessionDocRef.current, {
+          active: true,
+          activeWorkoutSession: workout,
+          playbackBlocks: flattenedBlocks,
+          timerSecondsLeft: 0,
+          initialRestDuration: 0,
+          isTimerRunning: false,
+        });
       }
+    } else {
+      showSnackbar('This workout has no sets or rest periods to start.', 'warning');
+      return;
     }
 
-    setPlaybackBlocks(flattenedBlocks);
-    setActiveWorkoutSession(workout);
-    setIsTimerRunning(false);
-    setTimerSecondsLeft(0);
-    setInitialRestDuration(0);
     showSnackbar(`Starting workout: ${workout.name}`, 'info');
   };
 
   // --- Pause/Resume Handler ---
-  const handlePauseResume = () => {
-    setIsTimerRunning((prev) => !prev);
+  const handlePauseResume = async () => {
+    if (!userId) return;
+    const docSnap = await getDoc(sessionDocRef.current);
+    if (!docSnap.exists()) return;
+    const currentStatus = docSnap.data().isTimerRunning;
+    await setDoc(sessionDocRef.current, { isTimerRunning: !currentStatus }, { merge: true });
   };
 
   // --- Stop Workout Handler ---
-  const handleStopWorkout = () => {
+  const handleStopWorkout = async () => {
+    if (!userId) return;
+    await setDoc(sessionDocRef.current, { active: false }, { merge: true });
     clearInterval(timerIntervalRef.current);
-    setActiveWorkoutSession(null);
-    setPlaybackBlocks([]);
-    setIsTimerRunning(false);
-    setTimerSecondsLeft(0);
-    setInitialRestDuration(0);
     showSnackbar('Workout stopped.', 'info');
   };
 
@@ -504,7 +582,46 @@ const App = () => {
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
       <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
-      <Container maxWidth="md">
+
+      {activeWorkoutSession && (
+        <Box sx={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 1100,
+          bgcolor: '#4caf50', // Green color
+          color: 'white',
+          p: 1.5,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          boxShadow: '0px 2px 10px rgba(0, 0, 0, 0.3)',
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <FitnessCenterIcon sx={{ mr: 1 }} />
+            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+              {activeWorkoutSession.name}
+            </Typography>
+            {timerSecondsLeft > 0 && (
+              <Box sx={{ ml: 3, display: 'flex', alignItems: 'center' }}>
+                <TimerIcon sx={{ mr: 1 }} />
+                <Typography variant="body1">{timerSecondsLeft}s</Typography>
+              </Box>
+            )}
+          </Box>
+          <Box>
+            <IconButton onClick={handlePauseResume} size="small" color="inherit">
+              {isTimerRunning ? <PauseIcon /> : <PlayArrowIcon />}
+            </IconButton>
+            <IconButton onClick={handleStopWorkout} size="small" color="inherit">
+              <StopIcon />
+            </IconButton>
+          </Box>
+        </Box>
+      )}
+
+      <Container maxWidth="md" sx={{ mt: activeWorkoutSession ? 10 : 4 }}>
         <Box sx={{ my: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         </Box>
 
