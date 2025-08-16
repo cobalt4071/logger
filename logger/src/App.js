@@ -25,11 +25,11 @@ import {
   Tabs, // Import Tabs component
   Tab,  // Import Tab component
 } from '@mui/material';
-import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import FitnessCenterIcon from '@mui/icons-material/FitnessCenter'; // Icon for Workout tab
 import SettingsIcon from '@mui/icons-material/Settings'; // Icon for Settings tab
+import AddIcon from '@mui/icons-material/Add'; // Changed import
 
 // Import Firebase modules
 import { initializeApp } from "firebase/app";
@@ -47,6 +47,7 @@ import {
   getAuth,
   GoogleAuthProvider, // Import GoogleAuthProvider
   signInWithPopup,    // Import signInWithPopup
+  signOut,          // Import signOut for logout functionality
   onAuthStateChanged,
 } from "firebase/auth";
 
@@ -71,7 +72,7 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 
 // Global variables for Canvas environment - MANDATORY to use
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+const appId = typeof window !== 'undefined' && window.__app_id ? window.__app_id : 'default-app-id';
 
 
 // Define the dark theme
@@ -218,6 +219,17 @@ const App = () => {
     } catch (error) {
       console.error("Error during Google Sign-In:", error.message);
       showSnackbar(`Google Sign-In failed: ${error.message}`, 'error');
+    }
+  };
+
+  // Function to handle Sign-Out
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      showSnackbar('Successfully signed out.', 'info');
+    } catch (error) {
+      console.error("Error during sign-out:", error.message);
+      showSnackbar(`Sign-out failed: ${error.message}`, 'error');
     }
   };
 
@@ -419,7 +431,7 @@ const App = () => {
                   },
                 }}
               >
-                <AddCircleOutlineIcon fontSize="medium" sx={{ color: darkTheme.palette.background.paper }}/>
+                <AddIcon fontSize="medium" sx={{ color: darkTheme.palette.background.paper }}/>
               </IconButton>
             </Box>
 
@@ -516,7 +528,7 @@ const App = () => {
               Manage app preferences and user profile here.
             </Typography>
 
-            {/* Google Sign-In button moved here */}
+            {/* Conditional rendering for Sign In / Sign Out buttons */}
             {!userId ? (
                 <Box sx={{ mb: 3, textAlign: 'center' }}>
                     <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
@@ -532,9 +544,19 @@ const App = () => {
                     </Button>
                 </Box>
             ) : (
-                <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-                    You are signed in. User ID: <strong>{userId}</strong>
-                </Typography>
+                <Box sx={{ mb: 3, textAlign: 'center' }}>
+                    <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                        You are signed in. User ID: <strong>{userId}</strong>
+                    </Typography>
+                    <Button
+                        variant="outlined"
+                        color="secondary"
+                        onClick={handleSignOut}
+                        sx={{ borderRadius: '8px', px: 4, py: 1.5 }}
+                    >
+                        Sign Out
+                    </Button>
+                </Box>
             )}
             {/* Future settings options will go here */}
           </Paper>
@@ -660,7 +682,7 @@ const App = () => {
           }}
         >
           <Tab
-            label="Workout"
+            label="Workouts"
             value="workout"
             icon={<FitnessCenterIcon />}
             sx={{
@@ -677,7 +699,7 @@ const App = () => {
           <Tab
             label="Sets"
             value="sets"
-            icon={<AddCircleOutlineIcon />}
+            icon={<AddIcon />}
             sx={{
               flexDirection: 'column',
               fontSize: '0.75rem',

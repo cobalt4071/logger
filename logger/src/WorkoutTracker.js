@@ -580,12 +580,15 @@ const WorkoutTracker = ({ userId, appId, db, plannedWorkouts, showSnackbar }) =>
                       <FormControlLabel
                         control={
                           <Checkbox
-                            icon={<CheckCircleOutlineIcon />}
-                            checkedIcon={<CheckCircleIcon color="success" />}
                             checked={block.status === 'completed'}
                             onChange={() => handleBlockCompletion(index)}
                             disabled={block.status !== 'active'}
-                            sx={{ '& .MuiSvgIcon-root': { fontSize: 28 } }}
+                            color="success"
+                            sx={{
+                              width: 36,
+                              height: 36,
+                              '& .MuiSvgIcon-root': { fontSize: 36 },
+                            }}
                           />
                         }
                         label=""
@@ -698,7 +701,7 @@ const WorkoutTracker = ({ userId, appId, db, plannedWorkouts, showSnackbar }) =>
           {/* Main heading for "Created Workouts" section with "Create New Workout" button */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6" sx={{ color: 'text.primary' }}>
-              Created Workouts
+              Planned Workouts
             </Typography>
             <IconButton
               color="primary"
