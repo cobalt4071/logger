@@ -44,7 +44,13 @@ import { collection, addDoc, query, onSnapshot, orderBy, doc, setDoc, deleteDoc 
 
 
 // WorkoutTracker component
-const WorkoutTracker = ({ userId, appId, db, plannedWorkouts, showSnackbar }) => {
+const WorkoutTracker = ({
+  userId, appId, db, plannedWorkouts, showSnackbar,
+  activeWorkoutSession, playbackBlocks, timerSecondsLeft, initialRestDuration, isTimerRunning,
+  handleStartWorkoutSession, handleBlockCompletion, handlePauseResume, handleStopWorkout,
+  advanceToNextActiveBlock,
+  setActiveWorkoutSession, setPlaybackBlocks, setIsTimerRunning, setTimerSecondsLeft, setInitialRestDuration,
+}) => {
   // State for the current workout being constructed or edited
   const [currentWorkoutName, setCurrentWorkoutName] = useState('');
   const [currentWorkoutBlocks, setCurrentWorkoutBlocks] = useState([]); // Array of { type, data }
@@ -61,100 +67,12 @@ const WorkoutTracker = ({ userId, appId, db, plannedWorkouts, showSnackbar }) =>
   const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
   const [isRestDialogOpen, setIsRestDialogOpen] = useState(false);
 
-  // --- Playback Specific States ---
-  const [activeWorkoutSession, setActiveWorkoutSession] = useState(null); // The original workout object
-  const [playbackBlocks, setPlaybackBlocks] = useState([]); // Flattened array of steps for playback with status
-  const [timerSecondsLeft, setTimerSecondsLeft] = useState(0);
-  const [initialRestDuration, setInitialRestDuration] = useState(0); // To calculate progress for active rest block
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const timerIntervalRef = useRef(null); // Ref to hold the interval ID for the timer
-  const activeBlockRef = useRef(null); // Ref to scroll the active block into view
-
-
   // Refs for drag and drop functionality
   const dragItem = useRef(null);
   const dragOverItem = useRef(null);
 
   // State to store created workouts (fetched from Firestore)
   const [createdWorkouts, setCreatedWorkouts] = useState([]);
-
-  // Function to advance to the next active block in playback.
-  // Wrapped in useCallback to ensure stability for useEffect dependencies.
-  const advanceToNextActiveBlock = React.useCallback(() => {
-    // Move helper inside useCallback
-    const findActiveBlockIndex = () => {
-      return playbackBlocks.findIndex(block => block.status === 'active');
-    };
-
-    const currentActiveIndex = findActiveBlockIndex();
-    if (currentActiveIndex === -1) return;
-
-    const newPlaybackBlocks = [...playbackBlocks];
-    newPlaybackBlocks[currentActiveIndex].status = 'completed';
-
-    // Find the next non-note pending block
-    const nextPendingNonNoteIndex = newPlaybackBlocks.findIndex((block, index) =>
-      index > currentActiveIndex && block.status === 'pending' && block.type !== 'note'
-    );
-    
-    // Mark any notes between the current block and the next active block as completed
-    if (nextPendingNonNoteIndex !== -1) {
-        for (let i = currentActiveIndex + 1; i < nextPendingNonNoteIndex; i++) {
-            if (newPlaybackBlocks[i].type === 'note') {
-                newPlaybackBlocks[i].status = 'completed';
-                showSnackbar('Note skipped.', 'info');
-            }
-        }
-    }
-
-
-    // If we've found a pending non-note block, mark it as active and handle it.
-    if (nextPendingNonNoteIndex !== -1) {
-      newPlaybackBlocks[nextPendingNonNoteIndex].status = 'active';
-      const nextBlock = newPlaybackBlocks[nextPendingNonNoteIndex];
-
-      // If the newly active block is a rest, start its timer
-      if (nextBlock.type === 'rest') {
-        setTimerSecondsLeft(nextBlock.duration);
-        setInitialRestDuration(nextBlock.duration); // Store for progress bar
-        setIsTimerRunning(true);
-      } else {
-        // Ensure timer is off and reset for non-rest blocks
-        setIsTimerRunning(false);
-        setTimerSecondsLeft(0);
-        setInitialRestDuration(0);
-      }
-      setPlaybackBlocks(newPlaybackBlocks); // Update state
-
-      // Scroll to the newly active block
-      setTimeout(() => { // Timeout to allow DOM update before scrolling
-        if (activeBlockRef.current) {
-          activeBlockRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 100);
-
-    } else {
-      // End of workout
-      showSnackbar('Workout Complete! Great job!', 'success');
-      setActiveWorkoutSession(null); // Go back to workout list
-      setPlaybackBlocks([]);
-      clearInterval(timerIntervalRef.current); // Ensure timer is cleared
-      setIsTimerRunning(false);
-      setTimerSecondsLeft(0);
-      setInitialRestDuration(0);
-    }
-  }, [playbackBlocks, showSnackbar]); // Remove findActiveBlockIndex from dependencies
-
-  // Generic handler for marking any block type as complete and moving on.
-  // This function calls advanceToNextActiveBlock, so it must be defined after it.
-  const handleBlockCompletion = (index) => {
-      // Only complete active blocks
-      const blockToComplete = playbackBlocks[index];
-      if (blockToComplete.status !== 'active') {
-          return;
-      }
-      advanceToNextActiveBlock();
-  };
 
   // Effect to load created workouts from Firestore
   useEffect(() => {
@@ -180,29 +98,6 @@ const WorkoutTracker = ({ userId, appId, db, plannedWorkouts, showSnackbar }) =>
       setCreatedWorkouts([]); // Clear created workouts if no user
     }
   }, [userId, appId, db, showSnackbar]); // Added showSnackbar to dependencies
-
-  // --- Timer Effect ---
-  // This useEffect now depends on the stable reference of advanceToNextActiveBlock
-  useEffect(() => {
-    // Only run if the timer is explicitly running and time is left
-    if (isTimerRunning && timerSecondsLeft > 0) {
-      timerIntervalRef.current = setInterval(() => {
-        setTimerSecondsLeft((prev) => prev - 1);
-      }, 1000);
-    } else if (timerSecondsLeft === 0 && isTimerRunning) {
-      // Timer finished for the active rest block
-      clearInterval(timerIntervalRef.current);
-      setIsTimerRunning(false);
-      showSnackbar("Time's up! Moving to next block.", 'info');
-      advanceToNextActiveBlock(); // Directly advance
-    }
-
-    // Cleanup interval on component unmount or when timer stops/re-renders
-    return () => {
-      clearInterval(timerIntervalRef.current);
-    };
-  }, [isTimerRunning, timerSecondsLeft, advanceToNextActiveBlock, showSnackbar]);
-
 
   // Function to open the workout name dialog (for new or editing name)
   const handleOpenWorkoutNameDialog = (workoutToEdit = null) => {
@@ -427,98 +322,6 @@ const WorkoutTracker = ({ userId, appId, db, plannedWorkouts, showSnackbar }) =>
     handleDragEnd(e);
   };
   // --- End Drag and Drop Handlers ---
-
-  // Function to handle starting a workout session from the list
-  const handleStartWorkoutSession = (workout) => {
-    const flattenedBlocks = [];
-    workout.blocks.forEach((block) => {
-      if (block.type === 'plannedSet') {
-        for (let i = 0; i < block.plannedSetDetails.sets; i++) {
-          flattenedBlocks.push({
-            type: 'plannedSetInstance',
-            exercise: block.plannedSetDetails.exercise,
-            reps: block.plannedSetDetails.reps,
-            weight: block.plannedSetDetails.weight,
-            currentSetNum: i + 1,
-            totalSets: block.plannedSetDetails.sets,
-            originalPlannedSetId: block.plannedSetDetails.id,
-            status: 'pending',
-          });
-          // Always add rest after each set if restTime > 0, regardless if it's the last set
-          if (block.plannedSetDetails.restTime > 0) {
-            flattenedBlocks.push({
-              type: 'rest',
-              duration: block.plannedSetDetails.restTime,
-              originatingPlannedSet: block.plannedSetDetails.exercise,
-              originatingSetNum: i + 1,
-              status: 'pending',
-            });
-          }
-        }
-      } else {
-        flattenedBlocks.push({ ...block, status: 'pending' });
-      }
-    });
-
-    // Find the first non-note block to start the workout
-    const firstActiveIndex = flattenedBlocks.findIndex(block => block.type !== 'note');
-
-    if (firstActiveIndex !== -1) {
-        // Mark all preceding note blocks as completed
-        for (let i = 0; i < firstActiveIndex; i++) {
-            if (flattenedBlocks[i].type === 'note') {
-                flattenedBlocks[i].status = 'completed';
-            }
-        }
-        // Set the first non-note block as active
-        flattenedBlocks[firstActiveIndex].status = 'active';
-
-        const firstActiveBlock = flattenedBlocks[firstActiveIndex];
-
-        // If the very first block is a rest, start the timer immediately
-        if (firstActiveBlock.type === 'rest') {
-            setTimerSecondsLeft(firstActiveBlock.duration);
-            setInitialRestDuration(firstActiveBlock.duration);
-            setIsTimerRunning(true);
-        }
-    }
-
-    setPlaybackBlocks(flattenedBlocks);
-    setActiveWorkoutSession(workout);
-    setIsTimerRunning(false);
-    setTimerSecondsLeft(0);
-    setInitialRestDuration(0);
-
-
-    showSnackbar(`Starting workout: ${workout.name}`, 'info');
-  };
-
-  // Helper to format date for display
-  const formatDate = (isoString) => {
-    return new Date(isoString).toLocaleString([], {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  // Add pause/resume handler
-  const handlePauseResume = () => {
-    setIsTimerRunning((prev) => !prev);
-  };
-
-  // Add stop handler
-  const handleStopWorkout = () => {
-    clearInterval(timerIntervalRef.current);
-    setActiveWorkoutSession(null);
-    setPlaybackBlocks([]);
-    setIsTimerRunning(false);
-    setTimerSecondsLeft(0);
-    setInitialRestDuration(0);
-    showSnackbar('Workout stopped.', 'info');
-  };
 
   return (
     <Paper elevation={3} sx={{ p: 3, borderRadius: 2, position: 'relative' }}>
