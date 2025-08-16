@@ -271,11 +271,11 @@ const App = () => {
   }, [isAuthReady, userId]); // Only depend on isAuthReady and userId
 
   // Function to show Snackbar notifications
-  const showSnackbar = (message, severity) => {
+  const showSnackbar = React.useCallback((message, severity) => {
     setSnackbarMessage(message);
     setSnackbarSeverity(severity);
     setSnackbarOpen(true);
-  };
+  }, []);
 
   // Function to close Snackbar
   const handleCloseSnackbar = (event, reason) => {
