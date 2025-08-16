@@ -260,7 +260,7 @@ const App = () => {
       // Clear workouts as no user data can be loaded.
       setPlannedWorkouts([]);
     }
-  }, [isAuthReady, userId, db, appId]); // Depend on auth readiness and userId, db, appId for effect
+  }, [isAuthReady, userId]); // Only depend on isAuthReady and userId
 
   // Function to show Snackbar notifications
   const showSnackbar = (message, severity) => {

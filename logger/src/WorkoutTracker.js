@@ -37,9 +37,6 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 
 // Import Firebase modules for Firestore operations
 import { collection, addDoc, query, onSnapshot, orderBy, doc, setDoc, deleteDoc } from "firebase/firestore";
@@ -80,15 +77,14 @@ const WorkoutTracker = ({ userId, appId, db, plannedWorkouts, showSnackbar }) =>
   // State to store created workouts (fetched from Firestore)
   const [createdWorkouts, setCreatedWorkouts] = useState([]);
 
-  // Helper to find the index of the current active block.
-  // Defined here so it's available for advanceToNextActiveBlock.
-  const findActiveBlockIndex = () => {
-    return playbackBlocks.findIndex(block => block.status === 'active');
-  };
-
   // Function to advance to the next active block in playback.
   // Wrapped in useCallback to ensure stability for useEffect dependencies.
   const advanceToNextActiveBlock = React.useCallback(() => {
+    // Move helper inside useCallback
+    const findActiveBlockIndex = () => {
+      return playbackBlocks.findIndex(block => block.status === 'active');
+    };
+
     const currentActiveIndex = findActiveBlockIndex();
     if (currentActiveIndex === -1) return;
 
@@ -146,7 +142,7 @@ const WorkoutTracker = ({ userId, appId, db, plannedWorkouts, showSnackbar }) =>
       setTimerSecondsLeft(0);
       setInitialRestDuration(0);
     }
-  }, [playbackBlocks, showSnackbar, findActiveBlockIndex]); // Dependencies for useCallback: playbackBlocks, showSnackbar, and findActiveBlockIndex.
+  }, [playbackBlocks, showSnackbar]); // Remove findActiveBlockIndex from dependencies
 
   // Generic handler for marking any block type as complete and moving on.
   // This function calls advanceToNextActiveBlock, so it must be defined after it.
