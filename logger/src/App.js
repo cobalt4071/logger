@@ -264,11 +264,9 @@ const App = () => {
       // Cleanup subscription on unmount or userId change
       return () => unsubscribe();
     } else if (isAuthReady && !userId) {
-      // If auth is ready but no user (e.g., not signed in yet)
-      // Clear workouts as no user data can be loaded.
       setPlannedWorkouts([]);
     }
-  }, [isAuthReady, userId]); // Only depend on isAuthReady and userId
+  }, [isAuthReady, userId, showSnackbar]); // <-- Add showSnackbar here
 
   // Function to show Snackbar notifications
   const showSnackbar = React.useCallback((message, severity) => {
