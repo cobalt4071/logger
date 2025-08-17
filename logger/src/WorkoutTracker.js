@@ -89,21 +89,7 @@ const WorkoutTracker = ({
     });
   };
   
-  // 🔥 FIX: ADDED MISSING useEffect FOR THE TIMER COUNTDOWN
-  useEffect(() => {
-    if (isTimerRunning && timerSecondsLeft > 0) {
-      timerIntervalRef.current = setInterval(() => {
-        setTimerSecondsLeft((prev) => prev - 1);
-      }, 1000);
-    } else if (timerSecondsLeft === 0 && isTimerRunning) {
-      clearInterval(timerIntervalRef.current);
-      setIsTimerRunning(false);
-      advanceToNextActiveBlock();
-    }
-    // Cleanup function to clear the interval when the component unmounts or dependencies change
-    return () => clearInterval(timerIntervalRef.current);
-  }, [isTimerRunning, timerSecondsLeft, setTimerSecondsLeft, setIsTimerRunning, advanceToNextActiveBlock]);
-
+  
   // Effect to load created workouts from Firestore
   useEffect(() => {
     if (userId) {
