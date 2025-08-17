@@ -78,7 +78,6 @@ const WorkoutTracker = ({
   const [createdWorkouts, setCreatedWorkouts] = useState([]);
 
   // Add missing refs
-  const timerIntervalRef = useRef(null);
   const activeBlockRef = useRef(null);
 
   // Add missing helper
