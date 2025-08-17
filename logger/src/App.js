@@ -529,7 +529,14 @@ const App = () => {
       showSnackbar('Please sign in to start a workout.', 'warning');
       return;
     }
-
+  
+    // Check if a workout is already active to prevent starting a new one
+    const docSnap = await getDoc(sessionDocRef.current);
+    if (docSnap.exists() && docSnap.data().active) {
+      showSnackbar('A workout is already in progress. Please stop it first.', 'warning');
+      return;
+    }
+  
     const flattenedBlocks = [];
     workout.blocks.forEach((block) => {
       if (block.type === 'plannedSet') {
@@ -558,7 +565,7 @@ const App = () => {
         flattenedBlocks.push({ ...block, status: 'pending' });
       }
     });
-
+  
     const firstActiveIndex = flattenedBlocks.findIndex(block => block.type !== 'note');
     if (firstActiveIndex !== -1) {
       for (let i = 0; i < firstActiveIndex; i++) {
@@ -575,7 +582,7 @@ const App = () => {
         isTimerRunning: false,
         timerSecondsLeft: 0,
         initialRestDuration: 0,
-        startTime: Date.now(),
+        startTime: Date.now(), // THIS IS THE KEY FIX
       };
       if (firstActiveBlock.type === 'rest') {
         sessionData.timerSecondsLeft = firstActiveBlock.duration;
@@ -587,7 +594,7 @@ const App = () => {
       showSnackbar('This workout has no sets or rest periods to start.', 'warning');
       return;
     }
-
+  
     showSnackbar(`Starting workout: ${workout.name}`, 'info');
   };
 
