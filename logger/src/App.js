@@ -234,7 +234,7 @@ const App = () => {
       handleStopWorkout();
       showSnackbar('Workout Complete! Great job!', 'success');
     }
-  }, [playbackBlocks, showSnackbar]);
+  }, [playbackBlocks, showSnackbar, handleStopWorkout]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -486,9 +486,9 @@ const App = () => {
         setInitialRestDuration(firstActiveBlock.duration);
         setIsTimerRunning(true);
       } else {
+        setIsTimerRunning(false);
         setTimerSecondsLeft(0);
         setInitialRestDuration(0);
-        setIsTimerRunning(false);
       }
     } else {
       showSnackbar('This workout has no sets or rest periods to start.', 'warning');
