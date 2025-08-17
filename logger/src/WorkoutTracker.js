@@ -71,6 +71,9 @@ const WorkoutTracker = ({
   const dragItem = useRef(null);
   const dragOverItem = useRef(null);
 
+  // State to manage which view is shown: the list of workouts or the active playback
+  const [view, setView] = useState('list');
+
   // State to store created workouts (fetched from Firestore)
   const [createdWorkouts, setCreatedWorkouts] = useState([]);
 
@@ -88,6 +91,16 @@ const WorkoutTracker = ({
       minute: '2-digit'
     });
   };
+
+  // Effect to switch to playback view when a workout becomes active,
+  // and switch back to list view when it's stopped.
+  useEffect(() => {
+    if (activeWorkoutSession) {
+      setView('playback');
+    } else {
+      setView('list');
+    }
+  }, [activeWorkoutSession]);
   
   
   // Effect to load created workouts from Firestore
@@ -341,19 +354,12 @@ const WorkoutTracker = ({
 
   return (
     <Paper elevation={3} sx={{ p: 3, borderRadius: 2, position: 'relative' }}>
-      {activeWorkoutSession ? (
+      {view === 'playback' && activeWorkoutSession ? (
         // --- Workout Playback View (Displays all blocks as a list) ---
         <Box>
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
             <IconButton
-              onClick={() => {
-                clearInterval(timerIntervalRef.current);
-                setActiveWorkoutSession(null);
-                setPlaybackBlocks([]);
-                setIsTimerRunning(false);
-                setTimerSecondsLeft(0);
-                setInitialRestDuration(0);
-              }}
+              onClick={() => setView('list')}
               aria-label="back to workouts"
               sx={{ mr: 1, color: 'text.secondary' }}
             >
@@ -528,14 +534,7 @@ const WorkoutTracker = ({
             <Button
               variant="contained"
               color="secondary"
-              onClick={() => {
-                clearInterval(timerIntervalRef.current);
-                setActiveWorkoutSession(null);
-                setPlaybackBlocks([]);
-                setIsTimerRunning(false);
-                setTimerSecondsLeft(0);
-                setInitialRestDuration(0);
-              }}
+              onClick={() => setView('list')}
               startIcon={<ArrowBackIcon />}
               sx={{ borderRadius: '8px', px: 4, py: 1.5 }}
             >
