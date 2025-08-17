@@ -207,7 +207,7 @@ const App = () => {
     const formattedSeconds = String(seconds).padStart(2, '0');
     return `${formattedMinutes}:${formattedSeconds}`;
   };
-
+  
   // --- Stop Workout Handler ---
   const handleStopWorkout = useCallback(async () => {
     if (!userId) return;
@@ -263,7 +263,7 @@ const App = () => {
       await handleStopWorkout();
     }
   }, [showSnackbar, handleStopWorkout]);
-
+  
   // 1. Firebase Authentication Setup
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -332,7 +332,7 @@ const App = () => {
     }
   }, [isAuthReady, userId, showSnackbar]);
 
-  // Effect to manage the timer countdown
+  // Effect to manage the rest timer countdown
   useEffect(() => {
     if (isTimerRunning && timerSecondsLeft > 0) {
       timerIntervalRef.current = setInterval(async () => {
@@ -506,7 +506,7 @@ const App = () => {
   const handleTabChange = (event, newValue) => {
     setCurrentTab(newValue);
   };
-
+  
   // --- Block Completion Handler ---
   const handleBlockCompletion = async (index) => {
     const docSnap = await getDoc(sessionDocRef.current);
@@ -625,16 +625,16 @@ const App = () => {
             <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
               {activeWorkoutSession.name}
             </Typography>
-            {timerSecondsLeft > 0 && (
-              <Box sx={{ ml: 3, display: 'flex', alignItems: 'center' }}>
-                <TimerIcon sx={{ mr: 1 }} />
-                <Typography variant="body1">{timerSecondsLeft}s</Typography>
-              </Box>
-            )}
             {elapsedSeconds > 0 && (
               <Box sx={{ ml: 3, display: 'flex', alignItems: 'center' }}>
                 <WatchLaterIcon sx={{ mr: 1 }} />
                 <Typography variant="body1">{formatTime(elapsedSeconds)}</Typography>
+              </Box>
+            )}
+            {timerSecondsLeft > 0 && (
+              <Box sx={{ ml: 3, display: 'flex', alignItems: 'center' }}>
+                <TimerIcon sx={{ mr: 1 }} />
+                <Typography variant="body1">{timerSecondsLeft}s</Typography>
               </Box>
             )}
           </Box>
