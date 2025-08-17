@@ -352,8 +352,11 @@ const App = () => {
   useEffect(() => {
     // This hook will now trigger correctly because activeWorkoutSession is being updated
     if (activeWorkoutSession && activeWorkoutSession.startTime) {
+      clearInterval(elapsedTimerIntervalRef.current); // Clear any existing interval
       elapsedTimerIntervalRef.current = setInterval(() => {
-        const elapsed = Math.floor((Date.now() - activeWorkoutSession.startTime) / 1000);
+        // The core fix: use .toMillis() to get the numerical timestamp
+        const startTimeMillis = activeWorkoutSession.startTime.toMillis();
+        const elapsed = Math.floor((Date.now() - startTimeMillis) / 1000);
         setElapsedSeconds(elapsed);
       }, 1000);
     } else {
@@ -584,7 +587,7 @@ const App = () => {
         isTimerRunning: false,
         timerSecondsLeft: 0,
         initialRestDuration: 0,
-        startTime: Date.now(),
+        startTime: new Date(), // Use new Date() to create a server timestamp
       };
       if (firstActiveBlock.type === 'rest') {
         sessionData.timerSecondsLeft = firstActiveBlock.duration;
