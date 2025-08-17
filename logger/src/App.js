@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Typography,
@@ -22,40 +22,40 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Tabs,
-  Tab,
+  Tabs, // Import Tabs component
+  Tab,  // Import Tab component
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
-import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
-import SettingsIcon from '@mui/icons-material/Settings';
-import AddIcon from '@mui/icons-material/Add';
-import TimerIcon from '@mui/icons-material/Timer';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import StopIcon from '@mui/icons-material/Stop';
-import PauseIcon from '@mui/icons-material/Pause';
-import {
-  initializeApp
-} from "firebase/app";
+import FitnessCenterIcon from '@mui/icons-material/FitnessCenter'; // Icon for Workout tab
+import SettingsIcon from '@mui/icons-material/Settings'; // Icon for Settings tab
+import AddIcon from '@mui/icons-material/Add'; // Changed import
+
+// Import Firebase modules
+import { initializeApp } from "firebase/app";
 import {
   getFirestore,
   collection,
   query,
-  onSnapshot,
+  onSnapshot, // For real-time updates
   addDoc,
   setDoc,
   deleteDoc,
-  doc,
+  doc, // For referencing specific documents
 } from "firebase/firestore";
 import {
   getAuth,
-  GoogleAuthProvider,
-  signInWithPopup,
-  signOut,
+  GoogleAuthProvider, // Import GoogleAuthProvider
+  signInWithPopup,    // Import signInWithPopup
+  signOut,          // Import signOut for logout functionality
   onAuthStateChanged,
 } from "firebase/auth";
+
+// Import the new WorkoutTracker component
 import WorkoutTracker from './WorkoutTracker';
 
+
+// Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
   authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
@@ -66,12 +66,16 @@ const firebaseConfig = {
   measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
+// Global variables for Canvas environment - MANDATORY to use
 const appId = typeof window !== 'undefined' && window.__app_id ? window.__app_id : 'default-app-id';
 
+
+// Define the dark theme
 const darkTheme = createTheme({
   palette: {
     mode: 'dark',
@@ -153,127 +157,68 @@ const darkTheme = createTheme({
   },
 });
 
+// Main App component for creating and listing workout sets
 const App = () => {
+  // State to hold the list of planned workout entries
   const [plannedWorkouts, setPlannedWorkouts] = useState([]);
+  // State for the current exercise being planned
   const [exercise, setExercise] = useState('');
+  // State for the current sets value
   const [sets, setSets] = useState('');
+  // State for the current reps value
   const [reps, setReps] = useState('');
+  // State for the current weight value
   const [weight, setWeight] = useState('');
+  // State for the current rest time value
   const [restTime, setRestTime] = useState('');
+  // State to control the visibility of the plan workout form modal
   const [isFormOpen, setIsFormOpen] = useState(false);
+  // State to store the ID of the workout being edited (null for new workout)
   const [editingWorkoutId, setEditingWorkoutId] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [userId, setUserId] = useState(null);
-  const [isAuthReady, setIsAuthReady] = useState(false);
-  const [currentTab, setCurrentTab] = useState('sets');
-
+  // State for Snackbar (for notifications)
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState('success');
+  // State for the search query
+  const [searchQuery, setSearchQuery] = useState('');
+  // State for user ID (for Firestore data separation)
+  const [userId, setUserId] = useState(null);
+  // State to track if auth is ready to fetch Firestore data
+  const [isAuthReady, setIsAuthReady] = useState(false);
 
-  const showSnackbar = useCallback((message, severity) => {
-    setSnackbarMessage(message);
-    setSnackbarSeverity(severity);
-    setSnackbarOpen(true);
-  }, []);
+  // New state for tab navigation: 'workout', 'sets', 'settings'
+  const [currentTab, setCurrentTab] = useState('sets');
 
+
+  // --- Workout Playback Persistent State ---
   const [activeWorkoutSession, setActiveWorkoutSession] = useState(null);
   const [playbackBlocks, setPlaybackBlocks] = useState([]);
   const [timerSecondsLeft, setTimerSecondsLeft] = useState(0);
   const [initialRestDuration, setInitialRestDuration] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const timerIntervalRef = React.useRef(null);
 
-  // WRAPPED IN useCallback
-  const handleStopWorkout = useCallback(() => {
-    setActiveWorkoutSession(null);
-    setPlaybackBlocks([]);
-    setIsTimerRunning(false);
-    setTimerSecondsLeft(0);
-    setInitialRestDuration(0);
-    showSnackbar('Workout stopped.', 'info');
-  }, [showSnackbar]);
-
-  const advanceToNextActiveBlock = useCallback(() => {
-    const findActiveBlockIndex = playbackBlocks.findIndex(block => block.status === 'active');
-    if (findActiveBlockIndex === -1) {
-      handleStopWorkout();
-      showSnackbar('Workout Complete! Great job!', 'success');
-      return;
-    }
-
-    const newPlaybackBlocks = [...playbackBlocks];
-    newPlaybackBlocks[findActiveBlockIndex].status = 'completed';
-
-    const nextPendingNonNoteIndex = newPlaybackBlocks.findIndex((block, index) =>
-      index > findActiveBlockIndex && block.status === 'pending' && block.type !== 'note'
-    );
-
-    if (nextPendingNonNoteIndex !== -1) {
-      for (let i = findActiveBlockIndex + 1; i < nextPendingNonNoteIndex; i++) {
-        if (newPlaybackBlocks[i].type === 'note') {
-          newPlaybackBlocks[i].status = 'completed';
-          showSnackbar('Note skipped.', 'info');
-        }
-      }
-    }
-
-    if (nextPendingNonNoteIndex !== -1) {
-      newPlaybackBlocks[nextPendingNonNoteIndex].status = 'active';
-      const nextBlock = newPlaybackBlocks[nextPendingNonNoteIndex];
-      setPlaybackBlocks(newPlaybackBlocks);
-
-      if (nextBlock.type === 'rest') {
-        setTimerSecondsLeft(nextBlock.duration);
-        setInitialRestDuration(nextBlock.duration);
-        setIsTimerRunning(true);
-      } else {
-        setIsTimerRunning(false);
-        setTimerSecondsLeft(0);
-        setInitialRestDuration(0);
-      }
-    } else {
-      handleStopWorkout();
-      showSnackbar('Workout Complete! Great job!', 'success');
-    }
-  }, [playbackBlocks, showSnackbar, handleStopWorkout]);
-
+  // 1. Firebase Authentication Setup
   useEffect(() => {
+    // Listen for authentication state changes
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         setUserId(user.uid);
-        setIsAuthReady(true);
+        setIsAuthReady(true); // Auth is ready, can now fetch Firestore data
+        console.log("Auth state changed. User ID:", user.uid);
       } else {
         setUserId(null);
-        setIsAuthReady(true);
+        setIsAuthReady(true); // Still set ready, even if no user, to allow unauthenticated state
+        console.log("Auth state changed. No user signed in.");
+        // If no user, showSnackbar is now handled directly in the Settings tab
       }
     });
+
+    // Cleanup subscription on unmount
     return () => unsubscribe();
-  }, []);
+  }, []); // Empty dependency array means this runs once on component mount
 
-  useEffect(() => {
-    if (isAuthReady && userId) {
-      const workoutCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/plannedWorkouts`);
-      const q = query(workoutCollectionRef);
-
-      const unsubscribeWorkouts = onSnapshot(q, (snapshot) => {
-        const workouts = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setPlannedWorkouts(workouts);
-      }, (error) => {
-        console.error('Error fetching planned workouts from Firestore:', error);
-        showSnackbar('Failed to load workout plan from cloud.', 'error');
-      });
-
-      return () => {
-        unsubscribeWorkouts();
-      };
-    } else if (isAuthReady && !userId) {
-      setPlannedWorkouts([]);
-    }
-  }, [isAuthReady, userId, showSnackbar]);
-
+  // Function to handle Google Sign-In
   const handleGoogleSignIn = async () => {
     const provider = new GoogleAuthProvider();
     try {
@@ -285,6 +230,7 @@ const App = () => {
     }
   };
 
+  // Function to handle Sign-Out
   const handleSignOut = async () => {
     try {
       await signOut(auth);
@@ -295,6 +241,43 @@ const App = () => {
     }
   };
 
+
+  // 2. Load planned workouts from Firestore on auth ready
+  useEffect(() => {
+    // Only fetch if auth is ready and userId is available
+    if (isAuthReady && userId) {
+      const workoutCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/plannedWorkouts`);
+      const q = query(workoutCollectionRef);
+
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const workouts = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setPlannedWorkouts(workouts);
+        showSnackbar('Workout plan loaded from cloud!', 'success');
+      }, (error) => {
+        console.error('Error fetching planned workouts from Firestore:', error);
+        showSnackbar('Failed to load workout plan from cloud.', 'error');
+      });
+
+      // Cleanup subscription on unmount or userId change
+      return () => unsubscribe();
+    } else if (isAuthReady && !userId) {
+      // If auth is ready but no user (e.g., not signed in yet)
+      // Clear workouts as no user data can be loaded.
+      setPlannedWorkouts([]);
+    }
+  }, [isAuthReady, userId]); // Only depend on isAuthReady and userId
+
+  // Function to show Snackbar notifications
+  const showSnackbar = (message, severity) => {
+    setSnackbarMessage(message);
+    setSnackbarSeverity(severity);
+    setSnackbarOpen(true);
+  };
+
+  // Function to close Snackbar
   const handleCloseSnackbar = (event, reason) => {
     if (reason === 'clickaway') {
       return;
@@ -302,8 +285,10 @@ const App = () => {
     setSnackbarOpen(false);
   };
 
+  // Functions to open and close the modal (these are still for planned sets)
   const handleOpenForm = (workoutToEdit = null) => {
     if (workoutToEdit) {
+      // If editing, populate fields and set editing ID
       setExercise(workoutToEdit.exercise);
       setSets(workoutToEdit.sets);
       setReps(workoutToEdit.reps);
@@ -311,6 +296,7 @@ const App = () => {
       setRestTime(workoutToEdit.restTime);
       setEditingWorkoutId(workoutToEdit.id);
     } else {
+      // If adding new, clear fields and reset editing ID
       setExercise('');
       setSets('');
       setReps('');
@@ -323,6 +309,7 @@ const App = () => {
 
   const handleCloseForm = () => {
     setIsFormOpen(false);
+    // Always clear fields and reset editing ID when closing
     setExercise('');
     setSets('');
     setReps('');
@@ -331,12 +318,14 @@ const App = () => {
     setEditingWorkoutId(null);
   };
 
+  // Function to add a new planned workout entry or update an existing one in Firestore
   const handleSaveWorkout = async () => {
     if (!userId) {
       showSnackbar('Please sign in with Google to save your workout.', 'error');
       return;
     }
 
+    // Input validation (kept from previous version)
     if (!exercise.trim()) {
       showSnackbar('Exercise name cannot be empty.', 'warning');
       return;
@@ -364,18 +353,18 @@ const App = () => {
       reps: parseInt(reps),
       weight: parseFloat(weight),
       restTime: parseInt(restTime),
-      userId: userId,
-      createdAt: Date.now(),
+      userId: userId, // Store the user ID with the workout
+      createdAt: Date.now(), // Timestamp for sorting
     };
 
     try {
       if (editingWorkoutId) {
+        // Update existing document
         const workoutDocRef = doc(db, `artifacts/${appId}/users/${userId}/plannedWorkouts`, editingWorkoutId);
-        await setDoc(workoutDocRef, workoutData, {
-          merge: true
-        });
+        await setDoc(workoutDocRef, workoutData, { merge: true }); // Use setDoc with merge for partial updates
         showSnackbar('Workout plan updated in cloud!', 'success');
       } else {
+        // Add new document
         await addDoc(collection(db, `artifacts/${appId}/users/${userId}/plannedWorkouts`), workoutData);
         showSnackbar('Workout set planned and saved to cloud!', 'success');
       }
@@ -384,6 +373,7 @@ const App = () => {
       showSnackbar(`Failed to save workout: ${error.message}`, 'error');
     }
 
+    // Clear input fields and close modal
     setExercise('');
     setSets('');
     setReps('');
@@ -393,6 +383,7 @@ const App = () => {
     handleCloseForm();
   };
 
+  // Function to delete a planned workout entry from Firestore
   const deletePlannedWorkout = async (idToDelete) => {
     if (!userId) {
       showSnackbar('Please sign in with Google to delete workouts.', 'error');
@@ -407,37 +398,71 @@ const App = () => {
     }
   };
 
+  // Filtered workouts based on search query
   const filteredWorkouts = plannedWorkouts.filter(workout =>
     workout.exercise.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Handle tab change
   const handleTabChange = (event, newValue) => {
     setCurrentTab(newValue);
   };
 
-  const handleBlockCompletion = (index) => {
-    if (index < 0 || index >= playbackBlocks.length) {
-      return;
+  // --- Advance Block Handler ---
+  const advanceToNextActiveBlock = React.useCallback(() => {
+    const findActiveBlockIndex = () => playbackBlocks.findIndex(block => block.status === 'active');
+    const currentActiveIndex = findActiveBlockIndex();
+    if (currentActiveIndex === -1) return;
+
+    const newPlaybackBlocks = [...playbackBlocks];
+    newPlaybackBlocks[currentActiveIndex].status = 'completed';
+
+    const nextPendingNonNoteIndex = newPlaybackBlocks.findIndex((block, index) =>
+      index > currentActiveIndex && block.status === 'pending' && block.type !== 'note'
+    );
+
+    if (nextPendingNonNoteIndex !== -1) {
+      for (let i = currentActiveIndex + 1; i < nextPendingNonNoteIndex; i++) {
+        if (newPlaybackBlocks[i].type === 'note') {
+          newPlaybackBlocks[i].status = 'completed';
+          showSnackbar('Note skipped.', 'info');
+        }
+      }
     }
 
-    const newBlocks = [...playbackBlocks];
-    newBlocks[index].status = 'completed';
-    setPlaybackBlocks(newBlocks);
+    if (nextPendingNonNoteIndex !== -1) {
+      newPlaybackBlocks[nextPendingNonNoteIndex].status = 'active';
+      const nextBlock = newPlaybackBlocks[nextPendingNonNoteIndex];
+      if (nextBlock.type === 'rest') {
+        setTimerSecondsLeft(nextBlock.duration);
+        setInitialRestDuration(nextBlock.duration);
+        setIsTimerRunning(true);
+      } else {
+        setIsTimerRunning(false);
+        setTimerSecondsLeft(0);
+        setInitialRestDuration(0);
+      }
+      setPlaybackBlocks(newPlaybackBlocks);
+    } else {
+      showSnackbar('Workout Complete! Great job!', 'success');
+      setActiveWorkoutSession(null);
+      setPlaybackBlocks([]);
+      clearInterval(timerIntervalRef.current);
+      setIsTimerRunning(false);
+      setTimerSecondsLeft(0);
+      setInitialRestDuration(0);
+    }
+  }, [playbackBlocks, showSnackbar]);
 
+  // --- Block Completion Handler ---
+  const handleBlockCompletion = (index) => {
+    const blockToComplete = playbackBlocks[index];
+    if (blockToComplete.status !== 'active') return;
     advanceToNextActiveBlock();
   };
 
+  // --- Start Workout Handler ---
   const handleStartWorkoutSession = (workout) => {
-    if (!userId) {
-      showSnackbar('Please sign in to start a workout.', 'warning');
-      return;
-    }
-
-    if (activeWorkoutSession) {
-      showSnackbar('A workout is already in progress. Please stop it first.', 'warning');
-      return;
-    }
-
     const flattenedBlocks = [];
     workout.blocks.forEach((block) => {
       if (block.type === 'plannedSet') {
@@ -463,9 +488,7 @@ const App = () => {
           }
         }
       } else {
-        flattenedBlocks.push({ ...block,
-          status: 'pending'
-        });
+        flattenedBlocks.push({ ...block, status: 'pending' });
       }
     });
 
@@ -478,122 +501,59 @@ const App = () => {
       }
       flattenedBlocks[firstActiveIndex].status = 'active';
       const firstActiveBlock = flattenedBlocks[firstActiveIndex];
-
-      setActiveWorkoutSession(workout);
-      setPlaybackBlocks(flattenedBlocks);
-
       if (firstActiveBlock.type === 'rest') {
         setTimerSecondsLeft(firstActiveBlock.duration);
         setInitialRestDuration(firstActiveBlock.duration);
         setIsTimerRunning(true);
-      } else {
-        setIsTimerRunning(false);
-        setTimerSecondsLeft(0);
-        setInitialRestDuration(0);
       }
-    } else {
-      showSnackbar('This workout has no sets or rest periods to start.', 'warning');
-      return;
     }
 
+    setPlaybackBlocks(flattenedBlocks);
+    setActiveWorkoutSession(workout);
+    setIsTimerRunning(false);
+    setTimerSecondsLeft(0);
+    setInitialRestDuration(0);
     showSnackbar(`Starting workout: ${workout.name}`, 'info');
   };
 
+  // --- Pause/Resume Handler ---
   const handlePauseResume = () => {
-    if (timerSecondsLeft > 0) {
-      setIsTimerRunning(prev => !prev);
-    }
+    setIsTimerRunning((prev) => !prev);
+  };
+
+  // --- Stop Workout Handler ---
+  const handleStopWorkout = () => {
+    clearInterval(timerIntervalRef.current);
+    setActiveWorkoutSession(null);
+    setPlaybackBlocks([]);
+    setIsTimerRunning(false);
+    setTimerSecondsLeft(0);
+    setInitialRestDuration(0);
+    showSnackbar('Workout stopped.', 'info');
   };
 
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
       <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
-
-      {activeWorkoutSession && (
-        <Box sx={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 1100,
-          bgcolor: '#4caf50',
-          color: 'white',
-          p: 1.5,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          boxShadow: '0px 2px 10px rgba(0, 0, 0, 0.3)',
-        }}>
-          <Box sx={{
-            display: 'flex',
-            alignItems: 'center'
-          }}>
-            <FitnessCenterIcon sx={{
-              mr: 1
-            }} />
-            <Typography variant="body1" sx={{
-              fontWeight: 'bold'
-            }}>
-              {activeWorkoutSession.name}
-            </Typography>
-            {timerSecondsLeft > 0 && (
-              <Box sx={{
-                ml: 3,
-                display: 'flex',
-                alignItems: 'center'
-              }}>
-                <TimerIcon sx={{
-                  mr: 1
-                }} />
-                <Typography variant="body1">{timerSecondsLeft}s</Typography>
-              </Box>
-            )}
-          </Box>
-          <Box>
-            <IconButton onClick={handlePauseResume} size="small" color="inherit">
-              {isTimerRunning ? <PauseIcon /> : <PlayArrowIcon />}
-            </IconButton>
-            <IconButton onClick={handleStopWorkout} size="small" color="inherit">
-              <StopIcon />
-            </IconButton>
-          </Box>
-        </Box>
-      )}
-
-      <Container maxWidth="md" sx={{
-        mt: activeWorkoutSession ? 10 : 4
-      }}>
-        <Box sx={{
-          my: 4,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center'
-        }}>
+      <Container maxWidth="md">
+        <Box sx={{ my: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          {/* Main heading removed */}
         </Box>
 
+        {/* Conditional rendering based on currentTab */}
         {currentTab === 'sets' && (
-          <Paper elevation={3} sx={{
-            p: 3,
-            borderRadius: 2,
-            position: 'relative'
-          }}>
-            <Box sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              mb: 2
-            }}>
-              <Typography variant="h6" sx={{
-                color: 'text.primary'
-              }}>
+          <Paper elevation={3} sx={{ p: 3, borderRadius: 2, position: 'relative' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6" sx={{ color: 'text.primary' }}>
                 Planned Sets
               </Typography>
+              {/* Add Set button, now filled in blue */}
               <IconButton
                 color="primary"
                 onClick={() => handleOpenForm(null)}
                 aria-label="plan new set"
-                disabled={!userId}
+                disabled={!userId} // Disable if not signed in
                 sx={{
                   borderRadius: '6px',
                   backgroundColor: 'primary.main',
@@ -603,36 +563,27 @@ const App = () => {
                   },
                 }}
               >
-                <AddIcon fontSize="medium" sx={{
-                  color: darkTheme.palette.background.paper
-                }} />
+                <AddIcon fontSize="medium" sx={{ color: darkTheme.palette.background.paper }}/>
               </IconButton>
             </Box>
 
+            {/* Search Bar */}
             <TextField
               label="Search Set"
               variant="outlined"
               fullWidth
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              sx={{
-                mb: 3
-              }}
-              disabled={!userId}
+              sx={{ mb: 3 }}
+              disabled={!userId} // Disable if not signed in
             />
 
             {filteredWorkouts.length === 0 && plannedWorkouts.length > 0 && searchQuery !== '' ? (
-              <Typography variant="body1" color="textSecondary" sx={{
-                textAlign: 'center',
-                mt: 2
-              }}>
+              <Typography variant="body1" color="textSecondary" sx={{ textAlign: 'center', mt: 2 }}>
                 No matching sets found for "{searchQuery}".
               </Typography>
             ) : filteredWorkouts.length === 0 && (!userId || plannedWorkouts.length === 0) ? (
-              <Typography variant="body1" color="textSecondary" sx={{
-                textAlign: 'center',
-                mt: 2
-              }}>
+              <Typography variant="body1" color="textSecondary" sx={{ textAlign: 'center', mt: 2 }}>
                 {userId ? 'No workouts planned yet. Click the \'+\' button to get started!' : 'Sign in to view and save your planned workouts.'}
               </Typography>
             ) : (
@@ -640,27 +591,16 @@ const App = () => {
                 <Table aria-label="planned workout table">
                   <TableHead>
                     <TableRow>
-                      <TableCell sx={{
-                        fontWeight: 'bold'
-                      }}>Exercise</TableCell>
-                      <TableCell align="right" sx={{
-                        fontWeight: 'bold'
-                      }}>Sets</TableCell>
-                      <TableCell align="right" sx={{
-                        fontWeight: 'bold'
-                      }}>Reps</TableCell>
-                      <TableCell align="right" sx={{
-                        fontWeight: 'bold'
-                      }}>Weight (kg)</TableCell>
-                      <TableCell align="right" sx={{
-                        fontWeight: 'bold'
-                      }}>Rest (s)</TableCell>
-                      <TableCell align="center" sx={{
-                        fontWeight: 'bold'
-                      }}>Actions</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Exercise</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>Sets</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>Reps</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>Weight (kg)</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>Rest (s)</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 'bold' }}>Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
+                    {/* Map over filteredWorkouts to display each entry */}
                     {filteredWorkouts.map((row) => (
                       <TableRow key={row.id}>
                         <TableCell component="th" scope="row">
@@ -676,10 +616,8 @@ const App = () => {
                             color="primary"
                             onClick={() => handleOpenForm(row)}
                             size="small"
-                            disabled={!userId}
-                            sx={{
-                              mr: 1
-                            }}
+                            disabled={!userId} // Disable if not signed in
+                            sx={{ mr: 1 }}
                           >
                             <EditIcon />
                           </IconButton>
@@ -688,7 +626,7 @@ const App = () => {
                             color="error"
                             onClick={() => deletePlannedWorkout(row.id)}
                             size="small"
-                            disabled={!userId}
+                            disabled={!userId} // Disable if not signed in
                           >
                             <DeleteIcon />
                           </IconButton>
@@ -709,6 +647,7 @@ const App = () => {
             db={db}
             plannedWorkouts={plannedWorkouts}
             showSnackbar={showSnackbar}
+            // Persistent workout session props
             activeWorkoutSession={activeWorkoutSession}
             playbackBlocks={playbackBlocks}
             timerSecondsLeft={timerSecondsLeft}
@@ -728,83 +667,53 @@ const App = () => {
         )}
 
         {currentTab === 'settings' && (
-          <Paper elevation={3} sx={{
-            p: 3,
-            borderRadius: 2,
-            textAlign: 'center'
-          }}>
-            <SettingsIcon sx={{
-              fontSize: 60,
-              color: 'secondary.main',
-              mb: 2
-            }} />
-            <Typography variant="h6" sx={{
-              color: 'text.primary',
-              mb: 1
-            }}>
+          <Paper elevation={3} sx={{ p: 3, borderRadius: 2, textAlign: 'center' }}>
+            <SettingsIcon sx={{ fontSize: 60, color: 'secondary.main', mb: 2 }} />
+            <Typography variant="h6" sx={{ color: 'text.primary', mb: 1 }}>
               Settings
             </Typography>
-            <Typography variant="body1" color="textSecondary" sx={{
-              mb: 3
-            }}>
+            <Typography variant="body1" color="textSecondary" sx={{ mb: 3 }}>
               Manage app preferences and user profile here.
             </Typography>
+
+            {/* Conditional rendering for Sign In / Sign Out buttons */}
             {!userId ? (
-              <Box sx={{
-                mb: 3,
-                textAlign: 'center'
-              }}>
-                <Typography variant="body2" color="textSecondary" sx={{
-                  mb: 2
-                }}>
-                  Sign in with Google to save your workout plans and access all features.
-                </Typography>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={handleGoogleSignIn}
-                  sx={{
-                    borderRadius: '8px',
-                    px: 4,
-                    py: 1.5
-                  }}
-                >
-                  Sign In with Google
-                </Button>
-              </Box>
+                <Box sx={{ mb: 3, textAlign: 'center' }}>
+                    <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                        Sign in with Google to save your workout plans and access all features.
+                    </Typography>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={handleGoogleSignIn}
+                        sx={{ borderRadius: '8px', px: 4, py: 1.5 }}
+                    >
+                        Sign In with Google
+                    </Button>
+                </Box>
             ) : (
-              <Box sx={{
-                mb: 3,
-                textAlign: 'center'
-              }}>
-                <Typography variant="body2" color="textSecondary" sx={{
-                  mb: 2
-                }}>
-                  You are signed in. User ID: <strong>{userId}</strong>
-                </Typography>
-                <Button
-                  variant="outlined"
-                  color="secondary"
-                  onClick={handleSignOut}
-                  sx={{
-                    borderRadius: '8px',
-                    px: 4,
-                    py: 1.5
-                  }}
-                >
-                  Sign Out
-                </Button>
-              </Box>
+                <Box sx={{ mb: 3, textAlign: 'center' }}>
+                    <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                        You are signed in. User ID: <strong>{userId}</strong>
+                    </Typography>
+                    <Button
+                        variant="outlined"
+                        color="secondary"
+                        onClick={handleSignOut}
+                        sx={{ borderRadius: '8px', px: 4, py: 1.5 }}
+                    >
+                        Sign Out
+                    </Button>
+                </Box>
             )}
+            {/* Future settings options will go here */}
           </Paper>
         )}
 
+
+        {/* The Modal/Prompt for planning a new set or editing an existing one */}
         <Dialog open={isFormOpen} onClose={handleCloseForm} maxWidth="xs" fullWidth>
-          <DialogTitle sx={{
-            textAlign: 'center',
-            pb: 1,
-            color: 'primary.main'
-          }}>
+          <DialogTitle sx={{ textAlign: 'center', pb: 1, color: 'primary.main' }}>
             {editingWorkoutId ? 'Edit Workout Set' : 'Plan New Workout Set'}
           </DialogTitle>
           <DialogContent>
@@ -833,10 +742,9 @@ const App = () => {
                 type="number"
                 value={sets}
                 onChange={(e) => setSets(e.target.value)}
-                inputProps={{
-                  min: 1
-                }}
+                inputProps={{ min: 1 }}
                 fullWidth
+
               />
               <TextField
                 label="Reps"
@@ -844,9 +752,7 @@ const App = () => {
                 type="number"
                 value={reps}
                 onChange={(e) => setReps(e.target.value)}
-                inputProps={{
-                  min: 1
-                }}
+                inputProps={{ min: 1 }}
                 fullWidth
               />
               <TextField
@@ -855,10 +761,7 @@ const App = () => {
                 type="number"
                 value={weight}
                 onChange={(e) => setWeight(e.target.value)}
-                inputProps={{
-                  min: 0,
-                  step: 0.5
-                }}
+                inputProps={{ min: 0, step: 0.5 }}
                 fullWidth
               />
               <TextField
@@ -867,25 +770,17 @@ const App = () => {
                 type="number"
                 value={restTime}
                 onChange={(e) => setRestTime(e.target.value)}
-                inputProps={{
-                  min: 0
-                }}
+                inputProps={{ min: 0 }}
                 fullWidth
               />
             </Box>
           </DialogContent>
-          <DialogActions sx={{
-            justifyContent: 'space-between',
-            px: 3,
-            pb: 2
-          }}>
+          <DialogActions sx={{ justifyContent: 'space-between', px: 3, pb: 2 }}>
             <Button
               variant="outlined"
               color="secondary"
               onClick={handleCloseForm}
-              sx={{
-                borderRadius: 1
-              }}
+              sx={{ borderRadius: 1 }}
             >
               Cancel
             </Button>
@@ -893,34 +788,32 @@ const App = () => {
               variant="contained"
               color="primary"
               onClick={handleSaveWorkout}
-              sx={{
-                borderRadius: 1
-              }}
+              sx={{ borderRadius: 1 }}
             >
               {editingWorkoutId ? 'Save Changes' : 'Plan Set'}
             </Button>
           </DialogActions>
         </Dialog>
 
+        {/* Snackbar for notifications */}
         <Snackbar open={snackbarOpen} autoHideDuration={3000} onClose={handleCloseSnackbar}>
-          <Alert onClose={handleCloseSnackbar} severity={snackbarSeverity} sx={{
-            width: '100%'
-          }}>
+          <Alert onClose={handleCloseSnackbar} severity={snackbarSeverity} sx={{ width: '100%' }}>
             {snackbarMessage}
           </Alert>
         </Snackbar>
       </Container>
 
+      {/* Bottom Navigation Bar using Material-UI Tabs */}
       <Paper sx={{
         position: 'fixed',
         bottom: 0,
         left: 0,
         right: 0,
         zIndex: 1000,
-        borderRadius: '12px 12px 0 0',
+        borderRadius: '12px 12px 0 0', // Rounded top corners only
         bgcolor: 'background.paper',
         py: 1,
-        boxShadow: '0px -2px 10px rgba(0, 0, 0, 0.3)',
+        boxShadow: '0px -2px 10px rgba(0, 0, 0, 0.3)', // Subtle shadow
       }} elevation={5}>
         <Tabs
           value={currentTab}
@@ -929,10 +822,10 @@ const App = () => {
           textColor="primary"
           centered
           sx={{
-            minHeight: '60px',
+            minHeight: '60px', // Ensure consistent height
             '& .MuiTabs-indicator': {
-              height: '4px',
-              borderRadius: '2px',
+              height: '4px', // Thicker indicator
+              borderRadius: '2px', // Rounded indicator
             },
           }}
         >
@@ -943,8 +836,8 @@ const App = () => {
             sx={{
               flexDirection: 'column',
               fontSize: '0.75rem',
-              minWidth: 'auto',
-              px: 2,
+              minWidth: 'auto', // Allow content to dictate width
+              px: 2, // Padding for better spacing
               color: currentTab === 'workout' ? darkTheme.palette.primary.main : darkTheme.palette.text.secondary,
               '&.Mui-selected': {
                 color: darkTheme.palette.primary.main,
