@@ -190,14 +190,6 @@ const App = () => {
   const [currentTab, setCurrentTab] = useState('sets');
 
 
-  // --- Workout Playback Persistent State ---
-  const [activeWorkoutSession, setActiveWorkoutSession] = useState(null);
-  const [playbackBlocks, setPlaybackBlocks] = useState([]);
-  const [timerSecondsLeft, setTimerSecondsLeft] = useState(0);
-  const [initialRestDuration, setInitialRestDuration] = useState(0);
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const timerIntervalRef = React.useRef(null);
-
   // 1. Firebase Authentication Setup
   useEffect(() => {
     // Listen for authentication state changes
@@ -408,130 +400,6 @@ const App = () => {
     setCurrentTab(newValue);
   };
 
-  // --- Advance Block Handler ---
-  const advanceToNextActiveBlock = React.useCallback(() => {
-    const findActiveBlockIndex = () => playbackBlocks.findIndex(block => block.status === 'active');
-    const currentActiveIndex = findActiveBlockIndex();
-    if (currentActiveIndex === -1) return;
-
-    const newPlaybackBlocks = [...playbackBlocks];
-    newPlaybackBlocks[currentActiveIndex].status = 'completed';
-
-    const nextPendingNonNoteIndex = newPlaybackBlocks.findIndex((block, index) =>
-      index > currentActiveIndex && block.status === 'pending' && block.type !== 'note'
-    );
-
-    if (nextPendingNonNoteIndex !== -1) {
-      for (let i = currentActiveIndex + 1; i < nextPendingNonNoteIndex; i++) {
-        if (newPlaybackBlocks[i].type === 'note') {
-          newPlaybackBlocks[i].status = 'completed';
-          showSnackbar('Note skipped.', 'info');
-        }
-      }
-    }
-
-    if (nextPendingNonNoteIndex !== -1) {
-      newPlaybackBlocks[nextPendingNonNoteIndex].status = 'active';
-      const nextBlock = newPlaybackBlocks[nextPendingNonNoteIndex];
-      if (nextBlock.type === 'rest') {
-        setTimerSecondsLeft(nextBlock.duration);
-        setInitialRestDuration(nextBlock.duration);
-        setIsTimerRunning(true);
-      } else {
-        setIsTimerRunning(false);
-        setTimerSecondsLeft(0);
-        setInitialRestDuration(0);
-      }
-      setPlaybackBlocks(newPlaybackBlocks);
-    } else {
-      showSnackbar('Workout Complete! Great job!', 'success');
-      setActiveWorkoutSession(null);
-      setPlaybackBlocks([]);
-      clearInterval(timerIntervalRef.current);
-      setIsTimerRunning(false);
-      setTimerSecondsLeft(0);
-      setInitialRestDuration(0);
-    }
-  }, [playbackBlocks, showSnackbar]);
-
-  // --- Block Completion Handler ---
-  const handleBlockCompletion = (index) => {
-    const blockToComplete = playbackBlocks[index];
-    if (blockToComplete.status !== 'active') return;
-    advanceToNextActiveBlock();
-  };
-
-  // --- Start Workout Handler ---
-  const handleStartWorkoutSession = (workout) => {
-    const flattenedBlocks = [];
-    workout.blocks.forEach((block) => {
-      if (block.type === 'plannedSet') {
-        for (let i = 0; i < block.plannedSetDetails.sets; i++) {
-          flattenedBlocks.push({
-            type: 'plannedSetInstance',
-            exercise: block.plannedSetDetails.exercise,
-            reps: block.plannedSetDetails.reps,
-            weight: block.plannedSetDetails.weight,
-            currentSetNum: i + 1,
-            totalSets: block.plannedSetDetails.sets,
-            originalPlannedSetId: block.plannedSetDetails.id,
-            status: 'pending',
-          });
-          if (block.plannedSetDetails.restTime > 0) {
-            flattenedBlocks.push({
-              type: 'rest',
-              duration: block.plannedSetDetails.restTime,
-              originatingPlannedSet: block.plannedSetDetails.exercise,
-              originatingSetNum: i + 1,
-              status: 'pending',
-            });
-          }
-        }
-      } else {
-        flattenedBlocks.push({ ...block, status: 'pending' });
-      }
-    });
-
-    const firstActiveIndex = flattenedBlocks.findIndex(block => block.type !== 'note');
-    if (firstActiveIndex !== -1) {
-      for (let i = 0; i < firstActiveIndex; i++) {
-        if (flattenedBlocks[i].type === 'note') {
-          flattenedBlocks[i].status = 'completed';
-        }
-      }
-      flattenedBlocks[firstActiveIndex].status = 'active';
-      const firstActiveBlock = flattenedBlocks[firstActiveIndex];
-      if (firstActiveBlock.type === 'rest') {
-        setTimerSecondsLeft(firstActiveBlock.duration);
-        setInitialRestDuration(firstActiveBlock.duration);
-        setIsTimerRunning(true);
-      }
-    }
-
-    setPlaybackBlocks(flattenedBlocks);
-    setActiveWorkoutSession(workout);
-    setIsTimerRunning(false);
-    setTimerSecondsLeft(0);
-    setInitialRestDuration(0);
-    showSnackbar(`Starting workout: ${workout.name}`, 'info');
-  };
-
-  // --- Pause/Resume Handler ---
-  const handlePauseResume = () => {
-    setIsTimerRunning((prev) => !prev);
-  };
-
-  // --- Stop Workout Handler ---
-  const handleStopWorkout = () => {
-    clearInterval(timerIntervalRef.current);
-    setActiveWorkoutSession(null);
-    setPlaybackBlocks([]);
-    setIsTimerRunning(false);
-    setTimerSecondsLeft(0);
-    setInitialRestDuration(0);
-    showSnackbar('Workout stopped.', 'info');
-  };
-
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
@@ -647,22 +515,6 @@ const App = () => {
             db={db}
             plannedWorkouts={plannedWorkouts}
             showSnackbar={showSnackbar}
-            // Persistent workout session props
-            activeWorkoutSession={activeWorkoutSession}
-            playbackBlocks={playbackBlocks}
-            timerSecondsLeft={timerSecondsLeft}
-            initialRestDuration={initialRestDuration}
-            isTimerRunning={isTimerRunning}
-            handleStartWorkoutSession={handleStartWorkoutSession}
-            handleBlockCompletion={handleBlockCompletion}
-            handlePauseResume={handlePauseResume}
-            handleStopWorkout={handleStopWorkout}
-            advanceToNextActiveBlock={advanceToNextActiveBlock}
-            setActiveWorkoutSession={setActiveWorkoutSession}
-            setPlaybackBlocks={setPlaybackBlocks}
-            setIsTimerRunning={setIsTimerRunning}
-            setTimerSecondsLeft={setTimerSecondsLeft}
-            setInitialRestDuration={setInitialRestDuration}
           />
         )}
 
