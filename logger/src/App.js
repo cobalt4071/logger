@@ -34,6 +34,7 @@ import TimerIcon from '@mui/icons-material/Timer';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import StopIcon from '@mui/icons-material/Stop';
 import PauseIcon from '@mui/icons-material/Pause';
+import WatchLaterIcon from '@mui/icons-material/WatchLater';
 
 // Import Firebase modules
 import { initializeApp } from "firebase/app";
@@ -193,14 +194,27 @@ const App = () => {
   const [timerSecondsLeft, setTimerSecondsLeft] = useState(0);
   const [initialRestDuration, setInitialRestDuration] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const timerIntervalRef = useRef(null);
+  const elapsedTimerIntervalRef = useRef(null);
   const sessionDocRef = useRef(null);
-  
+
+  // Helper function to format seconds into MM:SS
+  const formatTime = (totalSeconds) => {
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    const formattedMinutes = String(minutes).padStart(2, '0');
+    const formattedSeconds = String(seconds).padStart(2, '0');
+    return `${formattedMinutes}:${formattedSeconds}`;
+  };
+
   // --- Stop Workout Handler ---
   const handleStopWorkout = useCallback(async () => {
     if (!userId) return;
     await setDoc(sessionDocRef.current, { active: false }, { merge: true });
     clearInterval(timerIntervalRef.current);
+    clearInterval(elapsedTimerIntervalRef.current);
+    setElapsedSeconds(0);
     showSnackbar('Workout stopped.', 'info');
   }, [userId, showSnackbar]);
 
@@ -249,7 +263,7 @@ const App = () => {
       await handleStopWorkout();
     }
   }, [showSnackbar, handleStopWorkout]);
-  
+
   // 1. Firebase Authentication Setup
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -332,6 +346,19 @@ const App = () => {
     // Cleanup function to clear the interval
     return () => clearInterval(timerIntervalRef.current);
   }, [isTimerRunning, timerSecondsLeft, advanceToNextActiveBlock]);
+
+  // Effect to manage elapsed time display
+  useEffect(() => {
+    if (activeWorkoutSession && activeWorkoutSession.startTime) {
+      elapsedTimerIntervalRef.current = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - activeWorkoutSession.startTime) / 1000);
+        setElapsedSeconds(elapsed);
+      }, 1000);
+    } else {
+      setElapsedSeconds(0);
+    }
+    return () => clearInterval(elapsedTimerIntervalRef.current);
+  }, [activeWorkoutSession]);
 
   // Function to handle Google Sign-In
   const handleGoogleSignIn = async () => {
@@ -479,7 +506,7 @@ const App = () => {
   const handleTabChange = (event, newValue) => {
     setCurrentTab(newValue);
   };
-  
+
   // --- Block Completion Handler ---
   const handleBlockCompletion = async (index) => {
     const docSnap = await getDoc(sessionDocRef.current);
@@ -541,25 +568,21 @@ const App = () => {
       }
       flattenedBlocks[firstActiveIndex].status = 'active';
       const firstActiveBlock = flattenedBlocks[firstActiveIndex];
+      const sessionData = {
+        active: true,
+        activeWorkoutSession: workout,
+        playbackBlocks: flattenedBlocks,
+        isTimerRunning: false,
+        timerSecondsLeft: 0,
+        initialRestDuration: 0,
+        startTime: Date.now(),
+      };
       if (firstActiveBlock.type === 'rest') {
-        await setDoc(sessionDocRef.current, {
-          active: true,
-          activeWorkoutSession: workout,
-          playbackBlocks: flattenedBlocks,
-          timerSecondsLeft: firstActiveBlock.duration,
-          initialRestDuration: firstActiveBlock.duration,
-          isTimerRunning: true,
-        });
-      } else {
-        await setDoc(sessionDocRef.current, {
-          active: true,
-          activeWorkoutSession: workout,
-          playbackBlocks: flattenedBlocks,
-          timerSecondsLeft: 0,
-          initialRestDuration: 0,
-          isTimerRunning: false,
-        });
+        sessionData.timerSecondsLeft = firstActiveBlock.duration;
+        sessionData.initialRestDuration = firstActiveBlock.duration;
+        sessionData.isTimerRunning = true;
       }
+      await setDoc(sessionDocRef.current, sessionData);
     } else {
       showSnackbar('This workout has no sets or rest periods to start.', 'warning');
       return;
@@ -606,6 +629,12 @@ const App = () => {
               <Box sx={{ ml: 3, display: 'flex', alignItems: 'center' }}>
                 <TimerIcon sx={{ mr: 1 }} />
                 <Typography variant="body1">{timerSecondsLeft}s</Typography>
+              </Box>
+            )}
+            {elapsedSeconds > 0 && (
+              <Box sx={{ ml: 3, display: 'flex', alignItems: 'center' }}>
+                <WatchLaterIcon sx={{ mr: 1 }} />
+                <Typography variant="body1">{formatTime(elapsedSeconds)}</Typography>
               </Box>
             )}
           </Box>
