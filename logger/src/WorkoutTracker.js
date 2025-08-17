@@ -19,16 +19,16 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  LinearProgress, // For timer progress bar
-  Checkbox, // For set completion
-  FormControlLabel, // For Checkbox label
-  Accordion, // New import for dropdown
-  AccordionSummary, // New import for dropdown
-  AccordionDetails, // New import for dropdown
+  LinearProgress,
+  Checkbox,
+  FormControlLabel,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'; // New import for dropdown
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import AddIcon from '@mui/icons-material/Add';
-import ClearIcon from '@mui/icons-material/Clear'; // Corrected import path
+import ClearIcon from '@mui/icons-material/Clear';
 import NotesIcon from '@mui/icons-material/Notes';
 import TimerIcon from '@mui/icons-material/Timer';
 import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
@@ -37,7 +37,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow'; // Add this import
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 
 // Import Firebase modules for Firestore operations
 import { collection, addDoc, query, onSnapshot, orderBy, doc, setDoc, deleteDoc } from "firebase/firestore";
@@ -75,7 +75,7 @@ const WorkoutTracker = ({
   const [createdWorkouts, setCreatedWorkouts] = useState([]);
 
   // Add missing refs
-  const timerIntervalRef = useRef(null);
+  // REMOVED timerIntervalRef from here, as it belongs in the parent component.
   const activeBlockRef = useRef(null);
 
   // Add missing helper
@@ -89,20 +89,9 @@ const WorkoutTracker = ({
     });
   };
   
-  // 🔥 FIX: ADDED MISSING useEffect FOR THE TIMER COUNTDOWN
-  useEffect(() => {
-    if (isTimerRunning && timerSecondsLeft > 0) {
-      timerIntervalRef.current = setInterval(() => {
-        setTimerSecondsLeft((prev) => prev - 1);
-      }, 1000);
-    } else if (timerSecondsLeft === 0 && isTimerRunning) {
-      clearInterval(timerIntervalRef.current);
-      setIsTimerRunning(false);
-      advanceToNextActiveBlock();
-    }
-    // Cleanup function to clear the interval when the component unmounts or dependencies change
-    return () => clearInterval(timerIntervalRef.current);
-  }, [isTimerRunning, timerSecondsLeft, setTimerSecondsLeft, setIsTimerRunning, advanceToNextActiveBlock]);
+  // 🔥 REMOVED THE REDUNDANT useEffect FOR THE TIMER COUNTDOWN
+  // The timer logic is handled by the parent component (App.js)
+  // and passed down via props.
 
   // Effect to load created workouts from Firestore
   useEffect(() => {
@@ -360,14 +349,7 @@ const WorkoutTracker = ({
         <Box>
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
             <IconButton
-              onClick={() => {
-                clearInterval(timerIntervalRef.current);
-                setActiveWorkoutSession(null);
-                setPlaybackBlocks([]);
-                setIsTimerRunning(false);
-                setTimerSecondsLeft(0);
-                setInitialRestDuration(0);
-              }}
+              onClick={handleStopWorkout} // Use the parent's stop function
               aria-label="back to workouts"
               sx={{ mr: 1, color: 'text.secondary' }}
             >
@@ -494,9 +476,7 @@ const WorkoutTracker = ({
                             color="secondary"
                             size="small"
                             onClick={() => {
-                                clearInterval(timerIntervalRef.current);
-                                setIsTimerRunning(false);
-                                // Directly advance to the next block when skipping rest
+                                // Use the parent's function to advance the block
                                 advanceToNextActiveBlock();
                             }}
                             sx={{ borderRadius: '8px', ml: 2, mt: 1 }}
@@ -543,14 +523,7 @@ const WorkoutTracker = ({
             <Button
               variant="contained"
               color="secondary"
-              onClick={() => {
-                clearInterval(timerIntervalRef.current);
-                setActiveWorkoutSession(null);
-                setPlaybackBlocks([]);
-                setIsTimerRunning(false);
-                setTimerSecondsLeft(0);
-                setInitialRestDuration(0);
-              }}
+              onClick={handleStopWorkout} // Use the same stop function
               startIcon={<ArrowBackIcon />}
               sx={{ borderRadius: '8px', px: 4, py: 1.5 }}
             >
@@ -792,12 +765,13 @@ const WorkoutTracker = ({
               <Button onClick={() => handleCloseWorkoutNameDialog()} color="secondary">
                 Cancel
               </Button>
-              <Button onClick={handleSaveWorkoutName} color="primary" disabled={!workoutNameInput.trim()}>
-                {editingCreatedWorkoutId ? 'Save Name' : 'Create Workout'}
+              <Button onClick={handleSaveWorkoutName} color="primary" variant="contained">
+                Save
               </Button>
             </DialogActions>
           </Dialog>
 
+          {/* Dialog for Adding a Note */}
           <Dialog open={isNoteDialogOpen} onClose={() => setIsNoteDialogOpen(false)}>
             <DialogTitle>Add a Note</DialogTitle>
             <DialogContent>
@@ -821,25 +795,25 @@ const WorkoutTracker = ({
               <Button onClick={() => setIsNoteDialogOpen(false)} color="secondary">
                 Cancel
               </Button>
-              <Button onClick={() => addBlock('note')} color="primary" disabled={!noteText.trim()}>
-                Add Note
+              <Button onClick={() => addBlock('note')} color="primary" variant="contained">
+                Add
               </Button>
             </DialogActions>
           </Dialog>
-          
+
+          {/* Dialog for Adding Rest */}
           <Dialog open={isRestDialogOpen} onClose={() => setIsRestDialogOpen(false)}>
-            <DialogTitle>Add a Rest Period</DialogTitle>
+            <DialogTitle>Add Rest Period</DialogTitle>
             <DialogContent>
               <TextField
                 autoFocus
                 margin="dense"
-                label="Rest Time (seconds)"
+                label="Rest Duration (seconds)"
                 type="number"
                 fullWidth
                 variant="outlined"
                 value={restDuration}
                 onChange={(e) => setRestDuration(e.target.value)}
-                inputProps={{ min: 1 }}
                 onKeyPress={(e) => {
                   if (e.key === 'Enter') {
                     addBlock('rest');
@@ -851,85 +825,115 @@ const WorkoutTracker = ({
               <Button onClick={() => setIsRestDialogOpen(false)} color="secondary">
                 Cancel
               </Button>
-              <Button onClick={() => addBlock('rest')} color="primary" disabled={isNaN(parseInt(restDuration)) || parseInt(restDuration) <= 0}>
-                Add Rest
+              <Button onClick={() => addBlock('rest')} color="primary" variant="contained">
+                Add
               </Button>
             </DialogActions>
           </Dialog>
 
-          {/* New "Created Workouts" list using Accordion */}
-          <Box sx={{ mt: 4, mb: 2, p: 1, borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
-            {createdWorkouts.length === 0 ? (
-                <Typography variant="body2" color="textSecondary" sx={{ px: 2, py: 1 }}>
-                    {userId ? 'No created workouts found.' : 'Sign in to see your created workouts.'}
-                </Typography>
-            ) : (
-                createdWorkouts.map((workout) => (
-                    <Accordion key={workout.id} sx={{ bgcolor: 'background.paper', my: 1, '&:before': { display: 'none' } }}>
-                        <AccordionSummary
-                            expandIcon={<ExpandMoreIcon sx={{ color: 'text.secondary' }} />}
-                            aria-controls={`panel-${workout.id}-content`}
-                            id={`panel-${workout.id}-header`}
-                            sx={{
-                                '& .MuiAccordionSummary-content': {
-                                    my: 0.5,
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                },
-                            }}
-                        >
-                            <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
-                                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                                    {workout.name}
-                                </Typography>
-                                <Typography variant="body2" color="textSecondary" sx={{ ml: 1 }}>
-                                    {formatDate(workout.date)}
-                                </Typography>
-                            </Box>
-                            <Box sx={{ display: 'flex', gap: 1, ml: 2 }}>
-                                <IconButton
-                                    aria-label="play"
-                                    color="success"
-                                    onClick={(e) => { e.stopPropagation(); handleStartWorkoutSession(workout); }}
-                                    size="small"
-                                >
-                                    <PlayArrowIcon />
-                                </IconButton>
-                                <IconButton
-                                    aria-label="edit"
-                                    color="primary"
-                                    onClick={(e) => { e.stopPropagation(); handleOpenWorkoutNameDialog(workout); }}
-                                    size="small"
-                                >
-                                    <EditIcon />
-                                </IconButton>
-                                <IconButton
-                                    aria-label="delete"
-                                    color="error"
-                                    onClick={(e) => { e.stopPropagation(); deleteCreatedWorkout(workout.id); }}
-                                    size="small"
-                                >
-                                    <DeleteIcon />
-                                </IconButton>
-                            </Box>
-                        </AccordionSummary>
-                        <AccordionDetails sx={{ pt: 0 }}>
-                            <Divider sx={{ my: 1, borderColor: 'rgba(255,255,255,0.1)' }} />
-                            {workout.blocks.map((block, blockIndex) => (
-                                <Typography key={blockIndex} variant="body2" color="textSecondary" sx={{ ml: 1, my: 0.5 }}>
-                                    - {block.type === 'plannedSet'
-                                        ? `${block.plannedSetDetails.exercise}: ${block.plannedSetDetails.sets}x${block.plannedSetDetails.reps}`
-                                        : block.type === 'rest'
-                                        ? `Rest: ${block.duration}s`
-                                        : `Note: "${block.text}"`
-                                    }
-                                </Typography>
-                            ))}
-                        </AccordionDetails>
-                    </Accordion>
-                ))
-            )}
-          </Box>
+          <Divider sx={{ my: 3, borderColor: 'rgba(255,255,255,0.1)' }} />
+
+          {/* List of Created Workouts */}
+          <Typography variant="h6" sx={{ color: 'text.primary', mb: 2 }}>
+            My Workouts
+          </Typography>
+
+          {createdWorkouts.length === 0 ? (
+            <Typography variant="body2" color="textSecondary" sx={{ textAlign: 'center' }}>
+              No saved workouts.
+            </Typography>
+          ) : (
+            createdWorkouts.map((workout) => (
+              <Accordion
+                key={workout.id}
+                elevation={3}
+                sx={{
+                  mb: 1.5,
+                  borderRadius: '12px !important',
+                  '&:before': { display: 'none' }, // Hides the default Accordion border
+                }}
+              >
+                <AccordionSummary
+                  expandIcon={<ExpandMoreIcon sx={{ color: 'text.secondary' }} />}
+                  aria-controls={`panel-${workout.id}-content`}
+                  id={`panel-${workout.id}-header`}
+                >
+                  <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
+                    <FitnessCenterIcon sx={{ mr: 2, color: 'primary.main' }} />
+                    <Box sx={{ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                      <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                        {workout.name}
+                      </Typography>
+                      <Typography variant="body2" color="textSecondary">
+                        {workout.date ? formatDate(workout.date) : 'No date'}
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Box sx={{ flexShrink: 0 }}>
+                    <IconButton
+                      aria-label="edit"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenWorkoutNameDialog(workout);
+                      }}
+                      size="small"
+                      sx={{ mr: 1 }}
+                    >
+                      <EditIcon fontSize="small" color="info" />
+                    </IconButton>
+                    <IconButton
+                      aria-label="delete"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteCreatedWorkout(workout.id);
+                      }}
+                      size="small"
+                    >
+                      <DeleteIcon fontSize="small" color="error" />
+                    </IconButton>
+                  </Box>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <List disablePadding>
+                    {workout.blocks.map((block, blockIndex) => (
+                      <ListItem key={blockIndex} disableGutters>
+                        <ListItemIcon sx={{ minWidth: '32px' }}>
+                          {block.type === 'note' && <NotesIcon color="info" />}
+                          {block.type === 'rest' && <TimerIcon color="warning" />}
+                          {block.type === 'plannedSet' && <FitnessCenterIcon color="success" />}
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={
+                            block.type === 'note'
+                              ? `Note: ${block.text}`
+                              : block.type === 'rest'
+                                ? `Rest: ${block.duration} seconds`
+                                : `${block.plannedSetDetails.exercise} - ${block.plannedSetDetails.sets}x${block.plannedSetDetails.reps} @ ${block.plannedSetDetails.weight}kg`
+                          }
+                          sx={{ my: 0 }}
+                          primaryTypographyProps={{
+                            variant: 'body2',
+                            color: 'text.secondary'
+                          }}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                  <Box sx={{ mt: 2, textAlign: 'center' }}>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      onClick={() => handleStartWorkoutSession(workout)}
+                      startIcon={<PlayArrowIcon />}
+                      sx={{ borderRadius: '8px', px: 4, py: 1.5 }}
+                    >
+                      Start Workout
+                    </Button>
+                  </Box>
+                </AccordionDetails>
+              </Accordion>
+            ))
+          )}
         </>
       )}
     </Paper>

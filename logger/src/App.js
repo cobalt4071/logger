@@ -28,7 +28,7 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
-import SettingsIcon from '@mui/icons-material/Settings';
+import SettingsIcon from 'c@mui/icons-material/Settings';
 import AddIcon from '@mui/icons-material/Add';
 import TimerIcon from '@mui/icons-material/Timer';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
@@ -337,7 +337,6 @@ const App = () => {
     if (isTimerRunning && timerSecondsLeft > 0) {
       timerIntervalRef.current = setInterval(async () => {
         const newTime = timerSecondsLeft - 1;
-        // The fix is here: Use `{ merge: true }` to only update the timerSecondsLeft field
         await setDoc(sessionDocRef.current, { timerSecondsLeft: newTime }, { merge: true });
       }, 1000);
     } else if (timerSecondsLeft === 0 && isTimerRunning) {
@@ -348,20 +347,25 @@ const App = () => {
     return () => clearInterval(timerIntervalRef.current);
   }, [isTimerRunning, timerSecondsLeft, advanceToNextActiveBlock]);
 
-  // Effect to manage elapsed time display
+  // The NEW and IMPROVED Effect to manage elapsed time display
   useEffect(() => {
-    if (activeWorkoutSession && activeWorkoutSession.startTime) {
-      clearInterval(elapsedTimerIntervalRef.current);
+    if (activeWorkoutSession?.startTime) {
+      // Start the timer only if a valid startTime exists
+      clearInterval(elapsedTimerIntervalRef.current); // Clear any existing interval
       elapsedTimerIntervalRef.current = setInterval(() => {
+        // The core logic is to read from the Firestore data and calculate the elapsed time
         const startTimeMillis = activeWorkoutSession.startTime.toMillis();
         const elapsed = Math.floor((Date.now() - startTimeMillis) / 1000);
         setElapsedSeconds(elapsed);
       }, 1000);
     } else {
+      // If there's no active session or startTime, stop the timer
+      clearInterval(elapsedTimerIntervalRef.current);
       setElapsedSeconds(0);
     }
+    // Cleanup function to clear the interval
     return () => clearInterval(elapsedTimerIntervalRef.current);
-  }, [activeWorkoutSession]);
+  }, [activeWorkoutSession]); // Dependency on the activeWorkoutSession state
 
   // Function to handle Google Sign-In
   const handleGoogleSignIn = async () => {
