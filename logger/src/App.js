@@ -27,17 +27,17 @@ import {
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
-import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
-import SettingsIcon from '@mui/icons-material/Settings';
-import AddIcon from '@mui/icons-material/Add';
-import TimerIcon from '@mui/icons-material/Timer';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import StopIcon from '@mui/icons-material/Stop';
-import PauseIcon from '@mui/icons-material/Pause';
-import WatchLaterIcon from '@mui/icons-material/WatchLater';
+import FitnessCenterIcon from 'https://cdn.skypack.dev/@mui/icons-material/FitnessCenter?dts';
+import SettingsIcon from 'https://cdn.skypack.dev/@mui/icons-material/Settings?dts';
+import AddIcon from 'https://cdn.skypack.dev/@mui/icons-material/Add?dts';
+import TimerIcon from 'https://cdn.skypack.dev/@mui/icons-material/Timer?dts';
+import PlayArrowIcon from 'https://cdn.skypack.dev/@mui/icons-material/PlayArrow?dts';
+import StopIcon from 'https://cdn.skypack.dev/@mui/icons-material/Stop?dts';
+import PauseIcon from 'https://cdn.skypack.dev/@mui/icons-material/Pause?dts';
+import WatchLaterIcon from 'https://cdn.skypack.dev/@mui/icons-material/WatchLater?dts';
 
 // Import Firebase modules
-import { initializeApp } from "firebase/app";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getFirestore,
   collection,
@@ -48,17 +48,17 @@ import {
   deleteDoc,
   doc,
   getDoc,
-} from "firebase/firestore";
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
   getAuth,
   GoogleAuthProvider,
   signInWithPopup,
   signOut,
   onAuthStateChanged,
-} from "firebase/auth";
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 // Import the new WorkoutTracker component
-import WorkoutTracker from './WorkoutTracker';
+import WorkoutTracker from './WorkoutTracker.js';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -582,7 +582,7 @@ const App = () => {
         isTimerRunning: false,
         timerSecondsLeft: 0,
         initialRestDuration: 0,
-        startTime: Date.now(), // THIS IS THE KEY FIX
+        startTime: Date.now(),
       };
       if (firstActiveBlock.type === 'rest') {
         sessionData.timerSecondsLeft = firstActiveBlock.duration;
@@ -596,6 +596,7 @@ const App = () => {
     }
   
     showSnackbar(`Starting workout: ${workout.name}`, 'info');
+    // The previous code had a redundant 'return' here which was breaking the flow
   };
 
   // --- Pause/Resume Handler ---
