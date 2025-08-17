@@ -34,10 +34,9 @@ import TimerIcon from '@mui/icons-material/Timer';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import StopIcon from '@mui/icons-material/Stop';
 import PauseIcon from '@mui/icons-material/Pause';
-import WatchLaterIcon from '@mui/icons-material/WatchLater';
-
-// Import Firebase modules
-import { initializeApp } from "firebase/app";
+import {
+  initializeApp
+} from "firebase/app";
 import {
   getFirestore,
   collection,
@@ -47,7 +46,6 @@ import {
   setDoc,
   deleteDoc,
   doc,
-  getDoc,
 } from "firebase/firestore";
 import {
   getAuth,
@@ -56,11 +54,8 @@ import {
   signOut,
   onAuthStateChanged,
 } from "firebase/auth";
-
-// Import the new WorkoutTracker component
 import WorkoutTracker from './WorkoutTracker';
 
-// Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
   authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
@@ -71,15 +66,12 @@ const firebaseConfig = {
   measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-// Global variables for Canvas environment - MANDATORY to use
 const appId = typeof window !== 'undefined' && window.__app_id ? window.__app_id : 'default-app-id';
 
-// Define the dark theme
 const darkTheme = createTheme({
   palette: {
     mode: 'dark',
@@ -161,7 +153,6 @@ const darkTheme = createTheme({
   },
 });
 
-// Main App component for creating and listing workout sets
 const App = () => {
   const [plannedWorkouts, setPlannedWorkouts] = useState([]);
   const [exercise, setExercise] = useState('');
@@ -176,7 +167,6 @@ const App = () => {
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [currentTab, setCurrentTab] = useState('sets');
 
-  // --- Snackbar State and Function (Now only defined once) ---
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState('success');
@@ -186,26 +176,13 @@ const App = () => {
     setSnackbarSeverity(severity);
     setSnackbarOpen(true);
   }, []);
-  // --- End Snackbar State and Function ---
 
-  // --- Workout Playback State ---
   const [activeWorkoutSession, setActiveWorkoutSession] = useState(null);
   const [playbackBlocks, setPlaybackBlocks] = useState([]);
   const [timerSecondsLeft, setTimerSecondsLeft] = useState(0);
   const [initialRestDuration, setInitialRestDuration] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const sessionDocRef = useState(null);
 
-  // Helper function to format seconds into MM:SS
-  const formatTime = (totalSeconds) => {
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    const formattedMinutes = String(minutes).padStart(2, '0');
-    const formattedSeconds = String(seconds).padStart(2, '0');
-    return `${formattedMinutes}:${formattedSeconds}`;
-  };
-
-  // --- Stop Workout Handler ---
   const handleStopWorkout = () => {
     setActiveWorkoutSession(null);
     setPlaybackBlocks([]);
@@ -215,7 +192,6 @@ const App = () => {
     showSnackbar('Workout stopped.', 'info');
   };
 
-  // --- Advance Block Handler ---
   const advanceToNextActiveBlock = useCallback(() => {
     const findActiveBlockIndex = playbackBlocks.findIndex(block => block.status === 'active');
     if (findActiveBlockIndex === -1) {
@@ -239,7 +215,7 @@ const App = () => {
         }
       }
     }
-  
+
     if (nextPendingNonNoteIndex !== -1) {
       newPlaybackBlocks[nextPendingNonNoteIndex].status = 'active';
       const nextBlock = newPlaybackBlocks[nextPendingNonNoteIndex];
@@ -260,7 +236,6 @@ const App = () => {
     }
   }, [playbackBlocks, showSnackbar]);
 
-  // 1. Firebase Authentication Setup
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
@@ -274,7 +249,6 @@ const App = () => {
     return () => unsubscribe();
   }, []);
 
-  // 2. Load planned workouts
   useEffect(() => {
     if (isAuthReady && userId) {
       const workoutCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/plannedWorkouts`);
@@ -299,7 +273,6 @@ const App = () => {
     }
   }, [isAuthReady, userId, showSnackbar]);
 
-  // Function to handle Google Sign-In
   const handleGoogleSignIn = async () => {
     const provider = new GoogleAuthProvider();
     try {
@@ -311,7 +284,6 @@ const App = () => {
     }
   };
 
-  // Function to handle Sign-Out
   const handleSignOut = async () => {
     try {
       await signOut(auth);
@@ -322,7 +294,6 @@ const App = () => {
     }
   };
 
-  // Function to close Snackbar
   const handleCloseSnackbar = (event, reason) => {
     if (reason === 'clickaway') {
       return;
@@ -330,7 +301,6 @@ const App = () => {
     setSnackbarOpen(false);
   };
 
-  // Functions to open and close the modal (these are still for planned sets)
   const handleOpenForm = (workoutToEdit = null) => {
     if (workoutToEdit) {
       setExercise(workoutToEdit.exercise);
@@ -360,7 +330,6 @@ const App = () => {
     setEditingWorkoutId(null);
   };
 
-  // Function to add a new planned workout entry or update an existing one in Firestore
   const handleSaveWorkout = async () => {
     if (!userId) {
       showSnackbar('Please sign in with Google to save your workout.', 'error');
@@ -401,7 +370,9 @@ const App = () => {
     try {
       if (editingWorkoutId) {
         const workoutDocRef = doc(db, `artifacts/${appId}/users/${userId}/plannedWorkouts`, editingWorkoutId);
-        await setDoc(workoutDocRef, workoutData, { merge: true });
+        await setDoc(workoutDocRef, workoutData, {
+          merge: true
+        });
         showSnackbar('Workout plan updated in cloud!', 'success');
       } else {
         await addDoc(collection(db, `artifacts/${appId}/users/${userId}/plannedWorkouts`), workoutData);
@@ -421,7 +392,6 @@ const App = () => {
     handleCloseForm();
   };
 
-  // Function to delete a planned workout entry from Firestore
   const deletePlannedWorkout = async (idToDelete) => {
     if (!userId) {
       showSnackbar('Please sign in with Google to delete workouts.', 'error');
@@ -436,17 +406,14 @@ const App = () => {
     }
   };
 
-  // Filtered workouts based on search query
   const filteredWorkouts = plannedWorkouts.filter(workout =>
     workout.exercise.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Handle tab change
   const handleTabChange = (event, newValue) => {
     setCurrentTab(newValue);
   };
-  
-  // --- Block Completion Handler ---
+
   const handleBlockCompletion = (index) => {
     if (index < 0 || index >= playbackBlocks.length) {
       return;
@@ -456,23 +423,20 @@ const App = () => {
     newBlocks[index].status = 'completed';
     setPlaybackBlocks(newBlocks);
 
-    // This handles the state update and triggers the next block
     advanceToNextActiveBlock();
   };
 
-  // --- Start Workout Handler ---
   const handleStartWorkoutSession = (workout) => {
     if (!userId) {
       showSnackbar('Please sign in to start a workout.', 'warning');
       return;
     }
-  
-    // Check if a workout is already active to prevent starting a new one
+
     if (activeWorkoutSession) {
       showSnackbar('A workout is already in progress. Please stop it first.', 'warning');
       return;
     }
-  
+
     const flattenedBlocks = [];
     workout.blocks.forEach((block) => {
       if (block.type === 'plannedSet') {
@@ -498,10 +462,12 @@ const App = () => {
           }
         }
       } else {
-        flattenedBlocks.push({ ...block, status: 'pending' });
+        flattenedBlocks.push({ ...block,
+          status: 'pending'
+        });
       }
     });
-  
+
     const firstActiveIndex = flattenedBlocks.findIndex(block => block.type !== 'note');
     if (firstActiveIndex !== -1) {
       for (let i = 0; i < firstActiveIndex; i++) {
@@ -514,7 +480,7 @@ const App = () => {
 
       setActiveWorkoutSession(workout);
       setPlaybackBlocks(flattenedBlocks);
-      
+
       if (firstActiveBlock.type === 'rest') {
         setTimerSecondsLeft(firstActiveBlock.duration);
         setInitialRestDuration(firstActiveBlock.duration);
@@ -528,14 +494,13 @@ const App = () => {
       showSnackbar('This workout has no sets or rest periods to start.', 'warning');
       return;
     }
-  
+
     showSnackbar(`Starting workout: ${workout.name}`, 'info');
   };
 
-  // --- Pause/Resume Handler ---
   const handlePauseResume = () => {
     if (timerSecondsLeft > 0) {
-        setIsTimerRunning(prev => !prev);
+      setIsTimerRunning(prev => !prev);
     }
   };
 
@@ -544,7 +509,6 @@ const App = () => {
       <CssBaseline />
       <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
 
-      {/* This section now shows the active workout session state based on activeWorkoutSession */}
       {activeWorkoutSession && (
         <Box sx={{
           position: 'fixed',
@@ -552,7 +516,7 @@ const App = () => {
           left: 0,
           right: 0,
           zIndex: 1100,
-          bgcolor: '#4caf50', // Green color
+          bgcolor: '#4caf50',
           color: 'white',
           p: 1.5,
           display: 'flex',
@@ -560,14 +524,27 @@ const App = () => {
           justifyContent: 'space-between',
           boxShadow: '0px 2px 10px rgba(0, 0, 0, 0.3)',
         }}>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <FitnessCenterIcon sx={{ mr: 1 }} />
-            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center'
+          }}>
+            <FitnessCenterIcon sx={{
+              mr: 1
+            }} />
+            <Typography variant="body1" sx={{
+              fontWeight: 'bold'
+            }}>
               {activeWorkoutSession.name}
             </Typography>
             {timerSecondsLeft > 0 && (
-              <Box sx={{ ml: 3, display: 'flex', alignItems: 'center' }}>
-                <TimerIcon sx={{ mr: 1 }} />
+              <Box sx={{
+                ml: 3,
+                display: 'flex',
+                alignItems: 'center'
+              }}>
+                <TimerIcon sx={{
+                  mr: 1
+                }} />
                 <Typography variant="body1">{timerSecondsLeft}s</Typography>
               </Box>
             )}
@@ -583,14 +560,32 @@ const App = () => {
         </Box>
       )}
 
-      <Container maxWidth="md" sx={{ mt: activeWorkoutSession ? 10 : 4 }}>
-        <Box sx={{ my: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <Container maxWidth="md" sx={{
+        mt: activeWorkoutSession ? 10 : 4
+      }}>
+        <Box sx={{
+          my: 4,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center'
+        }}>
         </Box>
 
         {currentTab === 'sets' && (
-          <Paper elevation={3} sx={{ p: 3, borderRadius: 2, position: 'relative' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6" sx={{ color: 'text.primary' }}>
+          <Paper elevation={3} sx={{
+            p: 3,
+            borderRadius: 2,
+            position: 'relative'
+          }}>
+            <Box sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              mb: 2
+            }}>
+              <Typography variant="h6" sx={{
+                color: 'text.primary'
+              }}>
                 Planned Sets
               </Typography>
               <IconButton
@@ -607,7 +602,9 @@ const App = () => {
                   },
                 }}
               >
-                <AddIcon fontSize="medium" sx={{ color: darkTheme.palette.background.paper }}/>
+                <AddIcon fontSize="medium" sx={{
+                  color: darkTheme.palette.background.paper
+                }} />
               </IconButton>
             </Box>
 
@@ -617,16 +614,24 @@ const App = () => {
               fullWidth
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              sx={{ mb: 3 }}
+              sx={{
+                mb: 3
+              }}
               disabled={!userId}
             />
 
             {filteredWorkouts.length === 0 && plannedWorkouts.length > 0 && searchQuery !== '' ? (
-              <Typography variant="body1" color="textSecondary" sx={{ textAlign: 'center', mt: 2 }}>
+              <Typography variant="body1" color="textSecondary" sx={{
+                textAlign: 'center',
+                mt: 2
+              }}>
                 No matching sets found for "{searchQuery}".
               </Typography>
             ) : filteredWorkouts.length === 0 && (!userId || plannedWorkouts.length === 0) ? (
-              <Typography variant="body1" color="textSecondary" sx={{ textAlign: 'center', mt: 2 }}>
+              <Typography variant="body1" color="textSecondary" sx={{
+                textAlign: 'center',
+                mt: 2
+              }}>
                 {userId ? 'No workouts planned yet. Click the \'+\' button to get started!' : 'Sign in to view and save your planned workouts.'}
               </Typography>
             ) : (
@@ -634,12 +639,24 @@ const App = () => {
                 <Table aria-label="planned workout table">
                   <TableHead>
                     <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Exercise</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>Sets</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>Reps</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>Weight (kg)</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>Rest (s)</TableCell>
-                      <TableCell align="center" sx={{ fontWeight: 'bold' }}>Actions</TableCell>
+                      <TableCell sx={{
+                        fontWeight: 'bold'
+                      }}>Exercise</TableCell>
+                      <TableCell align="right" sx={{
+                        fontWeight: 'bold'
+                      }}>Sets</TableCell>
+                      <TableCell align="right" sx={{
+                        fontWeight: 'bold'
+                      }}>Reps</TableCell>
+                      <TableCell align="right" sx={{
+                        fontWeight: 'bold'
+                      }}>Weight (kg)</TableCell>
+                      <TableCell align="right" sx={{
+                        fontWeight: 'bold'
+                      }}>Rest (s)</TableCell>
+                      <TableCell align="center" sx={{
+                        fontWeight: 'bold'
+                      }}>Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -659,7 +676,9 @@ const App = () => {
                             onClick={() => handleOpenForm(row)}
                             size="small"
                             disabled={!userId}
-                            sx={{ mr: 1 }}
+                            sx={{
+                              mr: 1
+                            }}
                           >
                             <EditIcon />
                           </IconButton>
@@ -708,48 +727,83 @@ const App = () => {
         )}
 
         {currentTab === 'settings' && (
-          <Paper elevation={3} sx={{ p: 3, borderRadius: 2, textAlign: 'center' }}>
-            <SettingsIcon sx={{ fontSize: 60, color: 'secondary.main', mb: 2 }} />
-            <Typography variant="h6" sx={{ color: 'text.primary', mb: 1 }}>
+          <Paper elevation={3} sx={{
+            p: 3,
+            borderRadius: 2,
+            textAlign: 'center'
+          }}>
+            <SettingsIcon sx={{
+              fontSize: 60,
+              color: 'secondary.main',
+              mb: 2
+            }} />
+            <Typography variant="h6" sx={{
+              color: 'text.primary',
+              mb: 1
+            }}>
               Settings
             </Typography>
-            <Typography variant="body1" color="textSecondary" sx={{ mb: 3 }}>
+            <Typography variant="body1" color="textSecondary" sx={{
+              mb: 3
+            }}>
               Manage app preferences and user profile here.
             </Typography>
             {!userId ? (
-                <Box sx={{ mb: 3, textAlign: 'center' }}>
-                    <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-                        Sign in with Google to save your workout plans and access all features.
-                    </Typography>
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={handleGoogleSignIn}
-                        sx={{ borderRadius: '8px', px: 4, py: 1.5 }}
-                    >
-                        Sign In with Google
-                    </Button>
-                </Box>
+              <Box sx={{
+                mb: 3,
+                textAlign: 'center'
+              }}>
+                <Typography variant="body2" color="textSecondary" sx={{
+                  mb: 2
+                }}>
+                  Sign in with Google to save your workout plans and access all features.
+                </Typography>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleGoogleSignIn}
+                  sx={{
+                    borderRadius: '8px',
+                    px: 4,
+                    py: 1.5
+                  }}
+                >
+                  Sign In with Google
+                </Button>
+              </Box>
             ) : (
-                <Box sx={{ mb: 3, textAlign: 'center' }}>
-                    <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-                        You are signed in. User ID: <strong>{userId}</strong>
-                    </Typography>
-                    <Button
-                        variant="outlined"
-                        color="secondary"
-                        onClick={handleSignOut}
-                        sx={{ borderRadius: '8px', px: 4, py: 1.5 }}
-                    >
-                        Sign Out
-                    </Button>
-                </Box>
+              <Box sx={{
+                mb: 3,
+                textAlign: 'center'
+              }}>
+                <Typography variant="body2" color="textSecondary" sx={{
+                  mb: 2
+                }}>
+                  You are signed in. User ID: <strong>{userId}</strong>
+                </Typography>
+                <Button
+                  variant="outlined"
+                  color="secondary"
+                  onClick={handleSignOut}
+                  sx={{
+                    borderRadius: '8px',
+                    px: 4,
+                    py: 1.5
+                  }}
+                >
+                  Sign Out
+                </Button>
+              </Box>
             )}
           </Paper>
         )}
 
         <Dialog open={isFormOpen} onClose={handleCloseForm} maxWidth="xs" fullWidth>
-          <DialogTitle sx={{ textAlign: 'center', pb: 1, color: 'primary.main' }}>
+          <DialogTitle sx={{
+            textAlign: 'center',
+            pb: 1,
+            color: 'primary.main'
+          }}>
             {editingWorkoutId ? 'Edit Workout Set' : 'Plan New Workout Set'}
           </DialogTitle>
           <DialogContent>
@@ -778,7 +832,9 @@ const App = () => {
                 type="number"
                 value={sets}
                 onChange={(e) => setSets(e.target.value)}
-                inputProps={{ min: 1 }}
+                inputProps={{
+                  min: 1
+                }}
                 fullWidth
               />
               <TextField
@@ -787,7 +843,9 @@ const App = () => {
                 type="number"
                 value={reps}
                 onChange={(e) => setReps(e.target.value)}
-                inputProps={{ min: 1 }}
+                inputProps={{
+                  min: 1
+                }}
                 fullWidth
               />
               <TextField
@@ -796,7 +854,10 @@ const App = () => {
                 type="number"
                 value={weight}
                 onChange={(e) => setWeight(e.target.value)}
-                inputProps={{ min: 0, step: 0.5 }}
+                inputProps={{
+                  min: 0,
+                  step: 0.5
+                }}
                 fullWidth
               />
               <TextField
@@ -805,17 +866,25 @@ const App = () => {
                 type="number"
                 value={restTime}
                 onChange={(e) => setRestTime(e.target.value)}
-                inputProps={{ min: 0 }}
+                inputProps={{
+                  min: 0
+                }}
                 fullWidth
               />
             </Box>
           </DialogContent>
-          <DialogActions sx={{ justifyContent: 'space-between', px: 3, pb: 2 }}>
+          <DialogActions sx={{
+            justifyContent: 'space-between',
+            px: 3,
+            pb: 2
+          }}>
             <Button
               variant="outlined"
               color="secondary"
               onClick={handleCloseForm}
-              sx={{ borderRadius: 1 }}
+              sx={{
+                borderRadius: 1
+              }}
             >
               Cancel
             </Button>
@@ -823,7 +892,9 @@ const App = () => {
               variant="contained"
               color="primary"
               onClick={handleSaveWorkout}
-              sx={{ borderRadius: 1 }}
+              sx={{
+                borderRadius: 1
+              }}
             >
               {editingWorkoutId ? 'Save Changes' : 'Plan Set'}
             </Button>
@@ -831,7 +902,9 @@ const App = () => {
         </Dialog>
 
         <Snackbar open={snackbarOpen} autoHideDuration={3000} onClose={handleCloseSnackbar}>
-          <Alert onClose={handleCloseSnackbar} severity={snackbarSeverity} sx={{ width: '100%' }}>
+          <Alert onClose={handleCloseSnackbar} severity={snackbarSeverity} sx={{
+            width: '100%'
+          }}>
             {snackbarMessage}
           </Alert>
         </Snackbar>

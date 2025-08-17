@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Typography,
   Box,
@@ -8,7 +8,6 @@ import {
   ListItemText,
   Paper,
   Divider,
-  Grid,
   Modal,
   TextField,
   IconButton,
@@ -22,9 +21,8 @@ import SkipNextIcon from '@mui/icons-material/SkipNext';
 import DeleteIcon from '@mui/icons-material/Delete';
 import NoteAddIcon from '@mui/icons-material/NoteAdd';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
 import FlagIcon from '@mui/icons-material/Flag';
-import { doc, addDoc, collection, setDoc } from 'firebase/firestore';
+import { addDoc, collection } from 'firebase/firestore';
 
 const style = {
   position: 'absolute',
@@ -76,10 +74,8 @@ const WorkoutTracker = ({
   const [isAddNoteModalOpen, setIsAddNoteModalOpen] = useState(false);
   const [newNoteText, setNewNoteText] = useState('');
 
-  // REVERTED: The local timer ref and effect
   const timerIntervalRef = useRef(null);
 
-  // REVERTED: The local timer countdown effect
   useEffect(() => {
     if (isTimerRunning && timerSecondsLeft > 0) {
       timerIntervalRef.current = setInterval(() => {
@@ -153,14 +149,6 @@ const WorkoutTracker = ({
     } catch (error) {
       console.error('Error saving workout template:', error);
       showSnackbar('Failed to save workout template.', 'error');
-    }
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'completed': return 'success.main';
-      case 'active': return 'warning.main';
-      default: return 'text.secondary';
     }
   };
 
