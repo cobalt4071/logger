@@ -211,10 +211,8 @@ const App = () => {
   // --- Stop Workout Handler ---
   const handleStopWorkout = useCallback(async () => {
     if (!userId) return;
+    // The onSnapshot listener will handle cleaning up state and timers reactively.
     await setDoc(sessionDocRef.current, { active: false }, { merge: true });
-    clearInterval(timerIntervalRef.current);
-    clearInterval(elapsedTimerIntervalRef.current);
-    setElapsedSeconds(0);
     showSnackbar('Workout stopped.', 'info');
   }, [userId, showSnackbar]);
 
