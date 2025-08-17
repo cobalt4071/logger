@@ -853,6 +853,12 @@ const WorkoutTracker = ({
                             expandIcon={<ExpandMoreIcon sx={{ color: 'text.secondary' }} />}
                             aria-controls={`panel-${workout.id}-content`}
                             id={`panel-${workout.id}-header`}
+                            // If this workout is the active one, clicking it should take us back to the playback view.
+                            onClick={
+                                activeWorkoutSession && activeWorkoutSession.id === workout.id
+                                ? () => setView('playback')
+                                : undefined
+                            }
                             sx={{
                                 '& .MuiAccordionSummary-content': {
                                     my: 0.5,
