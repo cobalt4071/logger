@@ -290,7 +290,8 @@ const App = () => {
       const unsubscribeSession = onSnapshot(sessionDocRef.current, (docSnap) => {
         if (docSnap.exists() && docSnap.data().active) {
           const data = docSnap.data();
-          setActiveWorkoutSession(data.activeWorkoutSession);
+          // The fix is here: Update the component's state with the Firestore data
+          setActiveWorkoutSession(data.activeWorkoutSession); 
           setPlaybackBlocks(data.playbackBlocks || []);
           setTimerSecondsLeft(data.timerSecondsLeft || 0);
           setInitialRestDuration(data.initialRestDuration || 0);
@@ -349,6 +350,7 @@ const App = () => {
 
   // Effect to manage elapsed time display
   useEffect(() => {
+    // This hook will now trigger correctly because activeWorkoutSession is being updated
     if (activeWorkoutSession && activeWorkoutSession.startTime) {
       elapsedTimerIntervalRef.current = setInterval(() => {
         const elapsed = Math.floor((Date.now() - activeWorkoutSession.startTime) / 1000);
