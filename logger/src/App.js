@@ -183,14 +183,15 @@ const App = () => {
   const [initialRestDuration, setInitialRestDuration] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
 
-  const handleStopWorkout = () => {
+  // WRAPPED IN useCallback
+  const handleStopWorkout = useCallback(() => {
     setActiveWorkoutSession(null);
     setPlaybackBlocks([]);
     setIsTimerRunning(false);
     setTimerSecondsLeft(0);
     setInitialRestDuration(0);
     showSnackbar('Workout stopped.', 'info');
-  };
+  }, [showSnackbar]);
 
   const advanceToNextActiveBlock = useCallback(() => {
     const findActiveBlockIndex = playbackBlocks.findIndex(block => block.status === 'active');
