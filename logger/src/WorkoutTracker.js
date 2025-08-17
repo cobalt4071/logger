@@ -870,6 +870,11 @@ const WorkoutTracker = ({
                                 <Typography variant="body2" color="textSecondary" sx={{ ml: 1 }}>
                                     {formatDate(workout.date)}
                                 </Typography>
+                                {activeWorkoutSession && activeWorkoutSession.id === workout.id && (
+                                    <Typography variant="body2" sx={{ ml: 2, color: 'success.main', fontWeight: 'bold' }}>
+                                        Active Session
+                                    </Typography>
+                                )}
                             </Box>
                             <Box sx={{ display: 'flex', gap: 1, ml: 2 }}>
                                 <IconButton
