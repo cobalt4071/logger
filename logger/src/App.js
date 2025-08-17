@@ -335,9 +335,8 @@ const App = () => {
   // Effect to manage the rest timer countdown
   useEffect(() => {
     if (isTimerRunning && timerSecondsLeft > 0) {
-      timerIntervalRef.current = setInterval(async () => {
-        const newTime = timerSecondsLeft - 1;
-        await setDoc(sessionDocRef.current, { timerSecondsLeft: newTime }, { merge: true });
+      timerIntervalRef.current = setInterval(() => {
+        setTimerSecondsLeft(prevTime => (prevTime > 0 ? prevTime - 1 : 0));
       }, 1000);
     } else if (timerSecondsLeft === 0 && isTimerRunning) {
       clearInterval(timerIntervalRef.current);
@@ -603,8 +602,13 @@ const App = () => {
     if (!userId) return;
     const docSnap = await getDoc(sessionDocRef.current);
     if (!docSnap.exists()) return;
-    const currentStatus = docSnap.data().isTimerRunning;
-    await setDoc(sessionDocRef.current, { isTimerRunning: !currentStatus }, { merge: true });
+    const isCurrentlyRunning = docSnap.data().isTimerRunning;
+    const updateData = { isTimerRunning: !isCurrentlyRunning };
+    // If we are pausing the timer, save the current time left to Firestore.
+    if (isCurrentlyRunning) {
+      updateData.timerSecondsLeft = timerSecondsLeft;
+    }
+    await setDoc(sessionDocRef.current, updateData, { merge: true });
   };
 
   return (
