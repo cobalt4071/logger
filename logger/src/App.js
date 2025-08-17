@@ -190,6 +190,7 @@ const App = () => {
 
   // --- Workout Playback Persistent State using Firestore ---
   const [activeWorkoutSession, setActiveWorkoutSession] = useState(null);
+  const [activeSessionStartTime, setActiveSessionStartTime] = useState(null);
   const [playbackBlocks, setPlaybackBlocks] = useState([]);
   const [timerSecondsLeft, setTimerSecondsLeft] = useState(0);
   const [initialRestDuration, setInitialRestDuration] = useState(0);
@@ -289,12 +290,14 @@ const App = () => {
         if (docSnap.exists() && docSnap.data().active) {
           const data = docSnap.data();
           setActiveWorkoutSession(data.activeWorkoutSession);
+          setActiveSessionStartTime(data.startTime || null);
           setPlaybackBlocks(data.playbackBlocks || []);
           setTimerSecondsLeft(data.timerSecondsLeft || 0);
           setInitialRestDuration(data.initialRestDuration || 0);
           setIsTimerRunning(data.isTimerRunning || false);
         } else {
           setActiveWorkoutSession(null);
+          setActiveSessionStartTime(null);
           setPlaybackBlocks([]);
           setTimerSecondsLeft(0);
           setInitialRestDuration(0);
@@ -346,16 +349,16 @@ const App = () => {
 
   // Effect to manage elapsed time display
   useEffect(() => {
-    if (activeWorkoutSession && activeWorkoutSession.startTime) {
+    if (activeSessionStartTime) {
       elapsedTimerIntervalRef.current = setInterval(() => {
-        const elapsed = Math.floor((Date.now() - activeWorkoutSession.startTime) / 1000);
+        const elapsed = Math.floor((Date.now() - activeSessionStartTime) / 1000);
         setElapsedSeconds(elapsed);
       }, 1000);
     } else {
       setElapsedSeconds(0);
     }
     return () => clearInterval(elapsedTimerIntervalRef.current);
-  }, [activeWorkoutSession]);
+  }, [activeSessionStartTime]);
 
   // Function to handle Google Sign-In
   const handleGoogleSignIn = async () => {

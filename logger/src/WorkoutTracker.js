@@ -480,9 +480,8 @@ const WorkoutTracker = ({
                             color="secondary"
                             size="small"
                             onClick={() => {
-                                clearInterval(timerIntervalRef.current);
-                                setIsTimerRunning(false);
-                                // Directly advance to the next block when skipping rest
+                                // App.js handles all timer state logic when advancing.
+                                // Just need to call the advance function.
                                 advanceToNextActiveBlock();
                             }}
                             sx={{ borderRadius: '8px', ml: 2, mt: 1 }}
