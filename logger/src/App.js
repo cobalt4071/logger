@@ -514,13 +514,13 @@ const App = () => {
 
     const currentBlocks = docSnap.data().playbackBlocks;
     const blockToComplete = currentBlocks[index];
-    if (blockToComplete.status !== 'active') return;
-
-    const newBlocks = [...currentBlocks];
-    newBlocks[index].status = 'completed';
-    await setDoc(sessionDocRef.current, { playbackBlocks: newBlocks }, { merge: true });
-
-    advanceToNextActiveBlock();
+    // We only want to advance if the user clicks the currently active block.
+    if (blockToComplete.status !== 'active') {
+      return; // The checkbox should be disabled anyway, but this is a safeguard.
+    }
+    // advanceToNextActiveBlock will find the active block, mark it complete,
+    // and move to the next one, starting timers if needed.
+    await advanceToNextActiveBlock();
   };
 
   // --- Start Workout Handler ---
