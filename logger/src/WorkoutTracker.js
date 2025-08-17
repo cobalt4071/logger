@@ -1,942 +1,408 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  Box,
   Typography,
-  Paper,
-  TextField,
+  Box,
   Button,
-  IconButton,
-  MenuItem,
-  Select,
-  FormControl,
-  InputLabel,
   List,
   ListItem,
   ListItemText,
-  ListItemIcon,
+  Paper,
   Divider,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  LinearProgress,
-  Checkbox,
-  FormControlLabel,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
+  Grid,
+  Modal,
+  TextField,
+  IconButton,
 } from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import AddIcon from '@mui/icons-material/Add';
-import ClearIcon from '@mui/icons-material/Clear';
-import NotesIcon from '@mui/icons-material/Notes';
-import TimerIcon from '@mui/icons-material/Timer';
-import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
 import SaveIcon from '@mui/icons-material/Save';
-import DeleteIcon from '@mui/icons-material/Delete';
-import EditIcon from '@mui/icons-material/Edit';
-import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import AddIcon from '@mui/icons-material/Add';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import StopIcon from '@mui/icons-material/Stop';
+import PauseIcon from '@mui/icons-material/Pause';
+import SkipNextIcon from '@mui/icons-material/SkipNext';
+import DeleteIcon from '@mui/icons-material/Delete';
+import NoteAddIcon from '@mui/icons-material/NoteAdd';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
+import FlagIcon from '@mui/icons-material/Flag';
+import { doc, addDoc, collection, setDoc } from 'firebase/firestore';
 
-// Import Firebase modules for Firestore operations
-import { collection, addDoc, query, onSnapshot, orderBy, doc, setDoc, deleteDoc } from "firebase/firestore";
+const style = {
+  position: 'absolute',
+  top: '50%',
+  left: '50%',
+  transform: 'translate(-50%, -50%)',
+  width: 400,
+  bgcolor: 'background.paper',
+  borderRadius: '12px',
+  boxShadow: 24,
+  p: 4,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 2,
+};
 
+// Helper function to format seconds into MM:SS
+const formatTime = (totalSeconds) => {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+};
 
-// WorkoutTracker component
 const WorkoutTracker = ({
-  userId, appId, db, plannedWorkouts, showSnackbar,
-  activeWorkoutSession, playbackBlocks, timerSecondsLeft, initialRestDuration, isTimerRunning,
-  handleStartWorkoutSession, handleBlockCompletion, handlePauseResume, handleStopWorkout,
+  userId,
+  appId,
+  db,
+  plannedWorkouts,
+  showSnackbar,
+  activeWorkoutSession,
+  playbackBlocks,
+  timerSecondsLeft,
+  initialRestDuration,
+  isTimerRunning,
+  handleStartWorkoutSession,
+  handleBlockCompletion,
+  handlePauseResume,
+  handleStopWorkout,
   advanceToNextActiveBlock,
-  setActiveWorkoutSession, setPlaybackBlocks, setIsTimerRunning, setTimerSecondsLeft, setInitialRestDuration,
+  setActiveWorkoutSession,
+  setPlaybackBlocks,
+  setIsTimerRunning,
+  setTimerSecondsLeft,
+  setInitialRestDuration,
 }) => {
-  // State for the current workout being constructed or edited
-  const [currentWorkoutName, setCurrentWorkoutName] = useState('');
-  const [currentWorkoutBlocks, setCurrentWorkoutBlocks] = useState([]); // Array of { type, data }
-  const [isWorkoutNameDialogOpen, setIsWorkoutNameDialogOpen] = useState(false);
-  const [workoutNameInput, setWorkoutNameInput] = useState('');
-  const [editingCreatedWorkoutId, setEditingCreatedWorkoutId] = useState(null);
+  const [workoutName, setWorkoutName] = useState('');
+  const [sessionWorkouts, setSessionWorkouts] = useState([]);
+  const [isWorkoutBuilderOpen, setIsWorkoutBuilderOpen] = useState(false);
+  const [isAddNoteModalOpen, setIsAddNoteModalOpen] = useState(false);
+  const [newNoteText, setNewNoteText] = useState('');
 
-  // States for adding new blocks (Note, Rest)
-  const [noteText, setNoteText] = useState('');
-  const [restDuration, setRestDuration] = useState('');
-  const [selectedPlannedSetId, setSelectedPlannedSetId] = useState('');
+  // REVERTED: The local timer ref and effect
+  const timerIntervalRef = useRef(null);
 
-  // States for controlling dialogs
-  const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
-  const [isRestDialogOpen, setIsRestDialogOpen] = useState(false);
+  // REVERTED: The local timer countdown effect
+  useEffect(() => {
+    if (isTimerRunning && timerSecondsLeft > 0) {
+      timerIntervalRef.current = setInterval(() => {
+        setTimerSecondsLeft((prev) => prev - 1);
+      }, 1000);
+    } else if (timerSecondsLeft === 0 && isTimerRunning) {
+      clearInterval(timerIntervalRef.current);
+      setIsTimerRunning(false);
+      advanceToNextActiveBlock();
+    }
 
-  // Refs for drag and drop functionality
-  const dragItem = useRef(null);
-  const dragOverItem = useRef(null);
+    return () => clearInterval(timerIntervalRef.current);
+  }, [isTimerRunning, timerSecondsLeft, setTimerSecondsLeft, setIsTimerRunning, advanceToNextActiveBlock]);
 
-  // State to store created workouts (fetched from Firestore)
-  const [createdWorkouts, setCreatedWorkouts] = useState([]);
 
-  // Add missing refs
-  // REMOVED timerIntervalRef from here, as it belongs in the parent component.
-  const activeBlockRef = useRef(null);
+  const handleOpenWorkoutBuilder = () => {
+    setWorkoutName('');
+    setSessionWorkouts([]);
+    setIsWorkoutBuilderOpen(true);
+  };
 
-  // Add missing helper
-  const formatDate = (isoString) => {
-    return new Date(isoString).toLocaleString([], {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  const handleCloseWorkoutBuilder = () => {
+    setIsWorkoutBuilderOpen(false);
+  };
+
+  const handleAddPlannedSet = (plannedSet) => {
+    setSessionWorkouts((prev) => [...prev, {
+      type: 'plannedSet',
+      plannedSetDetails: plannedSet,
+    }]);
+  };
+
+  const handleAddNote = () => {
+    if (newNoteText.trim() === '') {
+      showSnackbar('Note cannot be empty!', 'warning');
+      return;
+    }
+    setSessionWorkouts((prev) => [...prev, {
+      type: 'note',
+      noteText: newNoteText,
+    }]);
+    setNewNoteText('');
+    setIsAddNoteModalOpen(false);
+  };
+
+  const handleDeleteBlock = (index) => {
+    setSessionWorkouts((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSaveWorkoutTemplate = async () => {
+    if (!userId) {
+      showSnackbar('Please sign in to save a workout template.', 'error');
+      return;
+    }
+    if (workoutName.trim() === '') {
+      showSnackbar('Workout name is required!', 'warning');
+      return;
+    }
+    if (sessionWorkouts.length === 0) {
+      showSnackbar('Add at least one set or note to save.', 'warning');
+      return;
+    }
+    try {
+      await addDoc(collection(db, `artifacts/${appId}/users/${userId}/workoutTemplates`), {
+        name: workoutName,
+        blocks: sessionWorkouts,
+        createdAt: Date.now(),
+      });
+      showSnackbar('Workout template saved successfully!', 'success');
+      handleCloseWorkoutBuilder();
+    } catch (error) {
+      console.error('Error saving workout template:', error);
+      showSnackbar('Failed to save workout template.', 'error');
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'completed': return 'success.main';
+      case 'active': return 'warning.main';
+      default: return 'text.secondary';
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'completed': return <FlagIcon sx={{ color: 'success.main', mr: 1 }} />;
+      case 'active': return <PlayArrowIcon sx={{ color: 'warning.main', mr: 1 }} />;
+      default: return <AccessTimeIcon sx={{ color: 'text.secondary', mr: 1 }} />;
+    }
+  };
+
+  const renderPlaybackBlock = (block, index) => {
+    const isRestBlock = block.type === 'rest';
+    const isActive = block.status === 'active';
+    const isCompleted = block.status === 'completed';
+
+    const renderText = () => {
+      if (block.type === 'plannedSetInstance') {
+        return `${block.exercise}: Set ${block.currentSetNum} of ${block.totalSets} (${block.reps} reps @ ${block.weight} kg)`;
+      } else if (isRestBlock) {
+        return `Rest: ${block.duration} seconds`;
+      } else if (block.type === 'note') {
+        return `Note: ${block.noteText}`;
+      }
+      return '';
+    };
+
+    return (
+      <ListItem
+        key={index}
+        sx={{
+          bgcolor: isActive ? 'warning.light' : isCompleted ? 'success.dark' : 'background.default',
+          my: 1,
+          borderRadius: 2,
+          border: isActive ? '2px solid' : '1px solid',
+          borderColor: isActive ? 'warning.main' : isCompleted ? 'success.dark' : 'divider',
+          boxShadow: isActive ? 5 : 1,
+          transition: 'all 0.3s',
+        }}
+      >
+        <ListItemText
+          primary={
+            <Box sx={{ display: 'flex', alignItems: 'center', fontWeight: 'bold' }}>
+              {getStatusIcon(block.status)}
+              <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                {renderText()}
+              </Typography>
+            </Box>
+          }
+        />
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          {!isRestBlock && !isCompleted && isActive && (
+            <Button
+              variant="contained"
+              color="success"
+              onClick={() => handleBlockCompletion(index)}
+              size="small"
+              sx={{ minWidth: 'auto' }}
+            >
+              Complete
+            </Button>
+          )}
+          {isRestBlock && isActive && (
+            <Button
+              variant="outlined"
+              color="secondary"
+              onClick={() => advanceToNextActiveBlock()}
+              size="small"
+              sx={{ minWidth: 'auto' }}
+            >
+              <SkipNextIcon sx={{ mr: 1 }} />
+              Skip
+            </Button>
+          )}
+        </Box>
+      </ListItem>
+    );
   };
   
-  // 🔥 REMOVED THE REDUNDANT useEffect FOR THE TIMER COUNTDOWN
-  // The timer logic is handled by the parent component (App.js)
-  // and passed down via props.
-
-  // Effect to load created workouts from Firestore
-  useEffect(() => {
-    if (userId) {
-      const createdWorkoutsRef = collection(db, `artifacts/${appId}/users/${userId}/recordedWorkouts`);
-      // Order by creation date, most recent first
-      const q = query(createdWorkoutsRef, orderBy('createdAt', 'desc'));
-
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const workouts = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setCreatedWorkouts(workouts);
-      }, (error) => {
-        console.error('Error fetching created workouts from Firestore:', error);
-        showSnackbar('Failed to load created workouts.', 'error');
-      });
-
-      // Cleanup subscription on unmount or userId change
-      return () => unsubscribe();
-    } else {
-      setCreatedWorkouts([]); // Clear created workouts if no user
-    }
-  }, [userId, appId, db, showSnackbar]); // Added showSnackbar to dependencies
-
-  // Function to open the workout name dialog (for new or editing name)
-  const handleOpenWorkoutNameDialog = (workoutToEdit = null) => {
-    if (workoutToEdit) {
-      setWorkoutNameInput(workoutToEdit.name);
-      setCurrentWorkoutName(workoutToEdit.name);
-      setCurrentWorkoutBlocks(workoutToEdit.blocks || []);
-      setEditingCreatedWorkoutId(workoutToEdit.id);
-    } else {
-      setWorkoutNameInput('');
-      setCurrentWorkoutName('');
-      setCurrentWorkoutBlocks([]);
-      setEditingCreatedWorkoutId(null);
-    }
-    setIsWorkoutNameDialogOpen(true);
-  };
-
-  // Function to close the workout name dialog
-  const handleCloseWorkoutNameDialog = () => {
-    setIsWorkoutNameDialogOpen(false);
-    setWorkoutNameInput('');
-    setEditingCreatedWorkoutId(null);
-    if (!currentWorkoutName && !editingCreatedWorkoutId) {
-        setCurrentWorkoutBlocks([]);
-    }
-  };
-
-  // Function to save workout name (for new or update existing name)
-  const handleSaveWorkoutName = () => {
-    if (!workoutNameInput.trim()) {
-      showSnackbar('Workout name cannot be empty.', 'warning');
-      return;
-    }
-
-    const nameExists = createdWorkouts.some(
-        workout => workout.name.toLowerCase() === workoutNameInput.trim().toLowerCase() && workout.id !== editingCreatedWorkoutId
-    );
-
-    if (nameExists) {
-        showSnackbar('A workout with this name already exists. Please choose a different name.', 'warning');
-        return;
-    }
-
-    if (editingCreatedWorkoutId) {
-      setCurrentWorkoutName(workoutNameInput.trim());
-      showSnackbar(`Workout name updated to "${workoutNameInput.trim()}"!`, 'success');
-    } else {
-      setCurrentWorkoutName(workoutNameInput.trim());
-      setCurrentWorkoutBlocks([]);
-      showSnackbar(`Workout "${workoutNameInput.trim()}" started!`, 'success');
-    }
-    setIsWorkoutNameDialogOpen(false);
-  };
-
-  // Function to add a block (note, rest, planned set) to the current workout
-  const addBlock = (type) => {
-    if (!currentWorkoutName) {
-      showSnackbar('Please name and start a workout first.', 'warning');
-      return;
-    }
-
-    let newBlock;
-    let message = '';
-
-    switch (type) {
-      case 'note':
-        if (!noteText.trim()) {
-          showSnackbar('Note cannot be empty.', 'warning');
-          return;
-        }
-        newBlock = { type: 'note', text: noteText.trim() };
-        setNoteText('');
-        message = 'Note added.';
-        setIsNoteDialogOpen(false);
-        break;
-      case 'rest':
-        if (isNaN(parseInt(restDuration)) || parseInt(restDuration) <= 0) {
-          showSnackbar('Rest time must be a positive number.', 'warning');
-          return;
-        }
-        newBlock = { type: 'rest', duration: parseInt(restDuration) };
-        setRestDuration('');
-        message = 'Rest time added.';
-        setIsRestDialogOpen(false);
-        break;
-      case 'plannedSet':
-        const selectedSet = plannedWorkouts.find(set => set.id === selectedPlannedSetId);
-        if (!selectedSet) {
-          showSnackbar('Please select a planned set.', 'warning');
-          return;
-        }
-        newBlock = {
-          type: 'plannedSet',
-          plannedSetDetails: { ...selectedSet },
-        };
-        setSelectedPlannedSetId('');
-        message = `Planned set "${selectedSet.exercise}" added.`;
-        break;
-      default:
-        return;
-    }
-
-    setCurrentWorkoutBlocks((prevBlocks) => [...prevBlocks, newBlock]);
-    showSnackbar(message, 'success');
-  };
-
-  // Function to remove a block from the workout being constructed
-  const removeBlock = (indexToRemove) => {
-    setCurrentWorkoutBlocks((prevBlocks) =>
-      prevBlocks.filter((_, index) => index !== indexToRemove)
-    );
-    showSnackbar('Block removed.', 'info');
-  };
-
-  // Function to save the entire constructed workout to Firestore (new or update)
-  const saveWorkoutSession = async () => {
-    if (!userId) {
-      showSnackbar('Please sign in with Google to save your workout.', 'error');
-      return;
-    }
-    if (!currentWorkoutName.trim()) {
-      showSnackbar('Please name your workout before saving.', 'warning');
-      return;
-    }
-    if (currentWorkoutBlocks.length === 0) {
-      showSnackbar('Add some blocks to your workout before saving.', 'warning');
-      return;
-    }
-
-    try {
-      const workoutSessionData = {
-        name: currentWorkoutName.trim(),
-        blocks: currentWorkoutBlocks,
-        userId: userId,
-        date: new Date().toISOString(),
-      };
-
-      if (editingCreatedWorkoutId) {
-        const workoutDocRef = doc(db, `artifacts/${appId}/users/${userId}/recordedWorkouts`, editingCreatedWorkoutId);
-        await setDoc(workoutDocRef, workoutSessionData, { merge: true });
-        showSnackbar('Workout session updated successfully!', 'success');
-      } else {
-        await addDoc(collection(db, `artifacts/${appId}/users/${userId}/recordedWorkouts`), {
-          ...workoutSessionData,
-          createdAt: Date.now(),
-        });
-        showSnackbar('New workout session created successfully!', 'success');
-      }
-
-      setCurrentWorkoutName('');
-      setCurrentWorkoutBlocks([]);
-      setEditingCreatedWorkoutId(null);
-    } catch (error) {
-      console.error('Error saving workout session to Firestore:', error);
-      showSnackbar(`Failed to save workout session: ${error.message}`, 'error');
-    }
-  };
-
-  // Function to delete a created workout session
-  const deleteCreatedWorkout = async (workoutIdToDelete) => {
-    if (!userId) {
-      showSnackbar('Please sign in to delete workouts.', 'error');
-      return;
-    }
-    try {
-      if (window.confirm('Are you sure you want to delete this workout session? This action cannot be undone.')) {
-        await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/recordedWorkouts`, workoutIdToDelete));
-        showSnackbar('Workout session deleted.', 'info');
-      }
-    } catch (error) {
-      console.error('Error deleting workout session from Firestore:', error);
-      showSnackbar(`Failed to delete workout session: ${error.message}`, 'error');
-    }
-  };
-
-  // --- Drag and Drop Handlers ---
-  const handleDragStart = (e, index) => {
-    dragItem.current = index;
-    e.currentTarget.style.opacity = '0.5';
-  };
-
-  const handleDragEnter = (e, index) => {
-    dragOverItem.current = index;
-    if (dragItem.current !== dragOverItem.current) {
-      e.currentTarget.style.border = '2px dashed #90caf9';
-    }
-  };
-
-  const handleDragLeave = (e) => {
-    e.currentTarget.style.border = 'none';
-  };
-
-  const handleDragEnd = (e) => {
-    e.currentTarget.style.opacity = '1';
-    e.currentTarget.style.border = 'none';
-    const allListItems = document.querySelectorAll('.draggable-workout-block');
-    allListItems.forEach(item => {
-      item.style.border = 'none';
-      item.style.opacity = '1';
-    });
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    const draggedIndex = dragItem.current;
-    const droppedIndex = dragOverItem.current;
-
-    if (draggedIndex === null || droppedIndex === null || draggedIndex === droppedIndex) {
-      handleDragEnd(e);
-      return;
-    }
-
-    const _currentWorkoutBlocks = [...currentWorkoutBlocks];
-    const [reorderedItem] = _currentWorkoutBlocks.splice(draggedIndex, 1);
-    _currentWorkoutBlocks.splice(droppedIndex, 0, reorderedItem);
-
-    setCurrentWorkoutBlocks(_currentWorkoutBlocks);
-    showSnackbar('Block reordered!', 'success');
-
-    dragItem.current = null;
-    dragOverItem.current = null;
-    handleDragEnd(e);
-  };
-  // --- End Drag and Drop Handlers ---
-
   return (
-    <Paper elevation={3} sx={{ p: 3, borderRadius: 2, position: 'relative' }}>
+    <Box>
       {activeWorkoutSession ? (
-        // --- Workout Playback View (Displays all blocks as a list) ---
-        <Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <IconButton
-              onClick={handleStopWorkout} // Use the parent's stop function
-              aria-label="back to workouts"
-              sx={{ mr: 1, color: 'text.secondary' }}
-            >
-              <ArrowBackIcon />
-            </IconButton>
-            <Typography variant="h5" sx={{ color: 'text.primary', flexGrow: 1 }}>
-              {activeWorkoutSession.name}
-            </Typography>
-          </Box>
-          <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
-            Date: {formatDate(activeWorkoutSession.date)}
-          </Typography>
-
-          <Divider sx={{ my: 3, borderColor: 'rgba(255,255,255,0.1)' }} />
-
-          {playbackBlocks.length > 0 ? (
-            <List sx={{ maxHeight: 'calc(100vh - 250px)', overflowY: 'auto', pr: 1 }}>
-              {playbackBlocks.map((block, index) => (
-                <Paper
-                  key={index}
-                  elevation={block.status === 'active' ? 5 : 1}
-                  sx={{
-                    mb: 1,
-                    p: 1.5,
-                    borderRadius: '8px',
-                    bgcolor:
-                      block.status === 'active'
-                        ? 'background.paper'
-                        : 'background.paper',
-                    opacity: block.status === 'completed' ? 0.6 : 1,
-                    border: block.status === 'active' ? '2px solid' : 'none',
-                    borderColor: block.status === 'active' ? 'primary.main' : 'transparent',
-                    minHeight: '60px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    position: 'relative',
-                  }}
-                  ref={block.status === 'active' ? activeBlockRef : null}
-                >
-                  {block.type === 'plannedSetInstance' && (
-                    <>
-                      <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
-                        <ListItemIcon sx={{ minWidth: '40px' }}>
-                          <FitnessCenterIcon fontSize="medium" color="success" />
-                        </ListItemIcon>
-                        <Box>
-                          <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                            {block.exercise} - Set {block.currentSetNum} of {block.totalSets}
-                          </Typography>
-                          <Typography variant="body2" color="textSecondary">
-                            {block.reps} reps @ {block.weight}kg
-                          </Typography>
-                        </Box>
-                      </Box>
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            checked={block.status === 'completed'}
-                            onChange={() => handleBlockCompletion(index)}
-                            disabled={block.status !== 'active'}
-                            color="success"
-                            sx={{
-                              width: 36,
-                              height: 36,
-                              '& .MuiSvgIcon-root': { fontSize: 36 },
-                            }}
-                          />
-                        }
-                        label=""
-                        sx={{ ml: 1 }}
-                      />
-                    </>
-                  )}
-
-                  {block.type === 'note' && (
-                    <>
-                      <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
-                        <ListItemIcon sx={{ minWidth: '40px' }}>
-                          <NotesIcon fontSize="medium" color="info" />
-                        </ListItemIcon>
-                        <Box>
-                          <Typography variant="body1" sx={{ color: 'info.main', fontWeight: 'bold' }}>
-                            Note:
-                          </Typography>
-                          <Typography variant="body2">{block.text}</Typography>
-                        </Box>
-                      </Box>
-                    </>
-                  )}
-
-                  {block.type === 'rest' && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                      <ListItemIcon sx={{ minWidth: '40px' }}>
-                        <TimerIcon fontSize="medium" color={block.originatingPlannedSet ? 'warning' : 'info'} />
-                      </ListItemIcon>
-                      <Box sx={{ flexGrow: 1 }}>
-                        <Typography variant="body1" sx={{ color: block.originatingPlannedSet ? 'warning.main' : 'info.main', fontWeight: 'bold' }}>
-                          Rest Time
-                        </Typography>
-                        <Typography variant="body2" color="textSecondary">
-                          {block.originatingPlannedSet ?
-                            `After ${block.originatingPlannedSet} Set ${block.originatingSetNum}`
-                            : 'General rest period'
-                          }
-                        </Typography>
-                      </Box>
-                      {/* Conditional rendering of timer and skip button based on active status */}
-                      {block.status === 'active' ? (
-                        <Box sx={{ textAlign: 'right', ml: 2, position: 'relative' }}>
-                          <Typography variant="h5" sx={{ color: block.originatingPlannedSet ? 'warning.main' : 'info.main', fontWeight: 'bold' }}>
-                            {timerSecondsLeft}s
-                          </Typography>
-                          {initialRestDuration > 0 && (
-                            <LinearProgress
-                              variant="determinate"
-                              value={((initialRestDuration - timerSecondsLeft) / initialRestDuration) * 100}
-                              color={block.originatingPlannedSet ? 'warning' : 'info'}
-                              sx={{ height: 4, borderRadius: 2, mt: 0.5 }}
-                            />
-                          )}
-                          <Button
-                            variant="outlined"
-                            color="secondary"
-                            size="small"
-                            onClick={() => {
-                                // Use the parent's function to advance the block
-                                advanceToNextActiveBlock();
-                            }}
-                            sx={{ borderRadius: '8px', ml: 2, mt: 1 }}
-                          >
-                            Skip
-                          </Button>
-                        </Box>
-                      ) : (
-                        // Display static rest duration for non-active rest blocks
-                        <Typography variant="h5" sx={{ color: block.originatingPlannedSet ? 'warning.main' : 'info.main', fontWeight: 'bold', ml: 2 }}>
-                          {block.duration}s
-                        </Typography>
-                      )}
-                    </Box>
-                  )}
-                </Paper>
-              ))}
-            </List>
-          ) : (
-            <Typography variant="body2" color="textSecondary" sx={{ textAlign: 'center', mt: 2 }}>
-              This workout has no blocks to play.
-            </Typography>
-          )}
-
-          {/* Playback Controls */}
-          <Box sx={{ mt: 3, textAlign: 'center', display: 'flex', justifyContent: 'center', gap: 2 }}>
-            <Button
-              variant={isTimerRunning ? "outlined" : "contained"}
-              color="warning"
-              onClick={handlePauseResume}
-              sx={{ borderRadius: '8px', px: 4, py: 1.5 }}
-              disabled={initialRestDuration === 0}
-            >
-              {isTimerRunning ? 'Pause' : 'Resume'}
-            </Button>
-            <Button
-              variant="contained"
-              color="error"
-              onClick={handleStopWorkout}
-              sx={{ borderRadius: '8px', px: 4, py: 1.5 }}
-            >
-              Stop
-            </Button>
-            <Button
-              variant="contained"
-              color="secondary"
-              onClick={handleStopWorkout} // Use the same stop function
-              startIcon={<ArrowBackIcon />}
-              sx={{ borderRadius: '8px', px: 4, py: 1.5 }}
-            >
-              Back to Workouts
-            </Button>
-          </Box>
-        </Box>
-
-      ) : (
-        // --- Workout Construction and Created Workouts List View (Existing UI) ---
-        <>
-          {/* Main heading for "Planned Workouts" section with "Create New Workout" button */}
+        <Paper elevation={3} sx={{ p: 3, borderRadius: 2 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6" sx={{ color: 'text.primary' }}>
-              Planned Workouts
+              Current Workout: {activeWorkoutSession.name}
             </Typography>
-            <IconButton
+            <Box>
+              <IconButton onClick={handlePauseResume} size="large" color="inherit">
+                {isTimerRunning ? <PauseIcon /> : <PlayArrowIcon />}
+              </IconButton>
+              <IconButton onClick={handleStopWorkout} size="large" color="inherit">
+                <StopIcon />
+              </IconButton>
+            </Box>
+          </Box>
+          <Box sx={{ textAlign: 'center', mb: 2 }}>
+            <Typography variant="h3" color="primary" sx={{ fontWeight: 'bold' }}>
+              {isTimerRunning ? formatTime(timerSecondsLeft) : '00:00'}
+            </Typography>
+            {isTimerRunning && initialRestDuration > 0 && (
+              <Typography variant="body1" color="text.secondary">
+                Rest Period
+              </Typography>
+            )}
+          </Box>
+          <Divider sx={{ my: 2 }} />
+          <List>
+            {playbackBlocks.map((block, index) => renderPlaybackBlock(block, index))}
+          </List>
+        </Paper>
+      ) : (
+        <Paper elevation={3} sx={{ p: 3, borderRadius: 2 }}>
+          <Typography variant="h6" sx={{ mb: 2 }}>Create a New Workout</Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+            <Button
+              variant="contained"
               color="primary"
-              onClick={() => handleOpenWorkoutNameDialog(null)}
-              aria-label="create new workout"
+              onClick={handleOpenWorkoutBuilder}
               disabled={!userId}
-              sx={{
-                borderRadius: '6px',
-                backgroundColor: 'primary.main',
-                padding: '6px',
-                '&:hover': {
-                  backgroundColor: 'primary.dark',
-                },
-              }}
+              startIcon={<AddIcon />}
+              sx={{ p: 2, minWidth: '200px' }}
             >
-              <AddIcon fontSize="medium" sx={{ color: 'background.paper' }}/>
-            </IconButton>
+              Build Workout
+            </Button>
+          </Box>
+        </Paper>
+      )}
+
+      <Modal open={isWorkoutBuilderOpen} onClose={handleCloseWorkoutBuilder}>
+        <Paper sx={{ ...style, width: { xs: '90%', md: '600px' }, maxHeight: '80vh', overflowY: 'auto' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+            <Typography variant="h6" component="h2" sx={{ fontWeight: 'bold' }}>
+              Workout Builder
+            </Typography>
+            <Box>
+              <IconButton onClick={() => setIsAddNoteModalOpen(true)} color="secondary" size="small">
+                <NoteAddIcon />
+              </IconButton>
+              <IconButton onClick={handleSaveWorkoutTemplate} color="primary" size="small" disabled={sessionWorkouts.length === 0 || workoutName.trim() === ''}>
+                <SaveIcon />
+              </IconButton>
+            </Box>
           </Box>
 
-          {/* Conditional display for the workout construction area */}
-          {currentWorkoutName ? (
-            <>
-              <Typography variant="subtitle1" sx={{ color: 'text.primary', mb: 1 }}>
-                Current Workout: <strong>{currentWorkoutName}</strong>
-                {editingCreatedWorkoutId && (
-                  <IconButton
-                    size="small"
-                    onClick={() => handleOpenWorkoutNameDialog({ id: editingCreatedWorkoutId, name: currentWorkoutName, blocks: currentWorkoutBlocks })}
-                    sx={{ ml: 1, color: 'text.secondary' }}
-                  >
-                    <EditIcon fontSize="small" />
-                  </IconButton>
-                )}
+          <TextField
+            label="Workout Name"
+            variant="outlined"
+            fullWidth
+            value={workoutName}
+            onChange={(e) => setWorkoutName(e.target.value)}
+            sx={{ mb: 2 }}
+          />
+
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+              Sets in this Workout:
+            </Typography>
+            <Button onClick={handleStartWorkoutSession} disabled={sessionWorkouts.length === 0}>Start Workout</Button>
+          </Box>
+          
+          <List sx={{ width: '100%', bgcolor: 'background.paper', mb: 2, p: 0 }}>
+            {sessionWorkouts.length === 0 ? (
+              <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mt: 2 }}>
+                Add sets or notes from the list below.
               </Typography>
-              <Button
-                variant="outlined"
-                color="secondary"
-                onClick={() => {
-                    setCurrentWorkoutName('');
-                    setCurrentWorkoutBlocks([]);
-                    setEditingCreatedWorkoutId(null);
-                    showSnackbar('Current workout cleared.', 'info');
-                }}
-                sx={{ borderRadius: '8px', mb: 3 }}
-              >
-                Clear Current Workout
-              </Button>
-
-              <Divider sx={{ my: 3, borderColor: 'rgba(255,255,255,0.1)' }} />
-
-              <Typography variant="subtitle1" sx={{ color: 'text.primary', mb: 1 }}>
-                Add Blocks to This Workout
-              </Typography>
-
-              {/* Buttons for Note and Rest */}
-              <Box sx={{ display: 'flex', gap: 2, mb: 1.5 }}>
-                <Button
-                  variant="outlined"
-                  color="info"
-                  startIcon={<NotesIcon />}
-                  onClick={() => setIsNoteDialogOpen(true)}
-                  disabled={!currentWorkoutName}
-                  sx={{ borderRadius: '8px', flexGrow: 1 }}
+            ) : (
+              sessionWorkouts.map((block, index) => (
+                <ListItem
+                  key={index}
+                  secondaryAction={
+                    <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteBlock(index)}>
+                      <DeleteIcon color="error" />
+                    </IconButton>
+                  }
+                  sx={{ my: 1, p: 2, borderRadius: 2, bgcolor: 'background.default' }}
                 >
-                  Add Note
-                </Button>
-                <Button
-                  variant="outlined"
-                  color="warning"
-                  startIcon={<TimerIcon />}
-                  onClick={() => setIsRestDialogOpen(true)}
-                  disabled={!currentWorkoutName}
-                  sx={{ borderRadius: '8px', flexGrow: 1 }}
-                >
-                  Add Rest
-                </Button>
-              </Box>
-
-              {/* Add Planned Set */}
-              <Box sx={{ display: 'flex', gap: 1, mb: 3, alignItems: 'center' }}>
-                <FormControl fullWidth variant="outlined" size="small">
-                  <InputLabel>Select Planned Set</InputLabel>
-                  <Select
-                    value={selectedPlannedSetId}
-                    onChange={(e) => setSelectedPlannedSetId(e.target.value)}
-                    label="Select Planned Set"
-                    disabled={!currentWorkoutName || plannedWorkouts.length === 0}
-                  >
-                    {plannedWorkouts.length === 0 ? (
-                      <MenuItem disabled>No planned sets available</MenuItem>
-                    ) : (
-                      plannedWorkouts.map((set) => (
-                        <MenuItem key={set.id} value={set.id}>
-                          {set.exercise} - {set.sets}x{set.reps} @ {set.weight}kg
-                        </MenuItem>
-                      ))
-                    )}
-                  </Select>
-                </FormControl>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={() => addBlock('plannedSet')}
-                  disabled={!selectedPlannedSetId || !currentWorkoutName}
-                  sx={{
-                    borderRadius: '8px',
-                    width: '36px',
-                    height: '36px',
-                    minWidth: '36px',
-                    minHeight: '36px',
-                    padding: '0',
-                  }}
-                >
-                  <AddIcon fontSize="medium" sx={{ color: 'background.paper' }}/>
-                </Button>
-              </Box>
-
-              <Typography variant="subtitle1" sx={{ color: 'text.primary', mb: 1 }}>
-                Workout Structure
-              </Typography>
-              {currentWorkoutBlocks.length === 0 ? (
-                <Typography variant="body2" color="textSecondary">
-                  Add blocks above to build your workout session.
-                </Typography>
-              ) : (
-                <List>
-                  {currentWorkoutBlocks.map((block, index) => (
-                    <Paper
-                      key={index}
-                      elevation={1}
-                      sx={{
-                        mb: 1,
-                        borderRadius: '8px',
-                        bgcolor: 'background.paper',
-                        cursor: 'grab',
-                        '&:active': {
-                          cursor: 'grabbing',
-                        },
-                      }}
-                      draggable="true"
-                      onDragStart={(e) => handleDragStart(e, index)}
-                      onDragEnter={(e) => handleDragEnter(e, index)}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDragLeave={(e) => handleDragLeave(e)}
-                      onDrop={(e) => handleDrop(e)}
-                      onDragEnd={(e) => handleDragEnd(e)}
-                      className="draggable-workout-block"
-                    >
-                      <ListItem
-                        secondaryAction={
-                          <IconButton edge="end" aria-label="remove" onClick={() => removeBlock(index)}>
-                            <ClearIcon sx={{ color: 'text.secondary' }} />
-                          </IconButton>
+                  <ListItemText
+                    primary={
+                      <Typography sx={{ fontWeight: 'bold' }}>
+                        {block.type === 'plannedSet'
+                          ? block.plannedSetDetails.exercise
+                          : 'Note'
                         }
-                      >
-                        {/* Drag handle icon */}
-                        <ListItemIcon sx={{ minWidth: '32px', cursor: 'grab' }}>
-                            <DragIndicatorIcon sx={{ color: 'text.secondary' }} />
-                        </ListItemIcon>
-                        <ListItemIcon sx={{ minWidth: '32px' }}>
-                          {block.type === 'note' && <NotesIcon color="info" />}
-                          {block.type === 'rest' && <TimerIcon color="warning" />}
-                          {block.type === 'plannedSet' && <FitnessCenterIcon color="success" />}
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={
-                            block.type === 'note'
-                              ? `Note: ${block.text}`
-                              : block.type === 'rest'
-                              ? `Rest: ${block.duration} seconds`
-                              : `${block.plannedSetDetails.exercise} - ${block.plannedSetDetails.sets} sets x ${block.plannedSetDetails.reps} reps @ ${block.plannedSetDetails.weight}kg`
-                          }
-                          sx={{ my: 0 }}
-                        />
-                      </ListItem>
-                    </Paper>
-                  ))}
-                </List>
-              )}
-
-              {/* Save Workout Button */}
-              <Box sx={{ mt: 3, textAlign: 'center' }}>
-                <Button
-                  variant="contained"
-                  color="success"
-                  startIcon={<SaveIcon />}
-                  onClick={saveWorkoutSession}
-                  disabled={currentWorkoutBlocks.length === 0 || !userId}
-                  sx={{ borderRadius: '8px', px: 4, py: 1.5 }}
-                >
-                  {editingCreatedWorkoutId ? 'Update Workout Session' : 'Save Workout Session'}
-                </Button>
-              </Box>
-            </>
-          ) : (
-            <Typography variant="body2" color="textSecondary" sx={{ textAlign: 'center', mt: 2, mb: 3 }}>
-              {userId ? 'Use the \'+\' button above to create your first workout session!' : 'Sign in to create and manage your workout sessions.'}
-            </Typography>
-          )}
-
-          {/* Dialog for Naming New Workout or Editing Name */}
-          <Dialog open={isWorkoutNameDialogOpen} onClose={handleCloseWorkoutNameDialog}>
-            <DialogTitle>
-              {editingCreatedWorkoutId ? 'Edit Workout Name' : 'Name Your Workout'}
-            </DialogTitle>
-            <DialogContent>
-              <TextField
-                autoFocus
-                margin="dense"
-                label="Workout Name"
-                type="text"
-                fullWidth
-                variant="outlined"
-                value={workoutNameInput}
-                onChange={(e) => setWorkoutNameInput(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    handleSaveWorkoutName();
-                  }
-                }}
-              />
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => handleCloseWorkoutNameDialog()} color="secondary">
-                Cancel
-              </Button>
-              <Button onClick={handleSaveWorkoutName} color="primary" variant="contained">
-                Save
-              </Button>
-            </DialogActions>
-          </Dialog>
-
-          {/* Dialog for Adding a Note */}
-          <Dialog open={isNoteDialogOpen} onClose={() => setIsNoteDialogOpen(false)}>
-            <DialogTitle>Add a Note</DialogTitle>
-            <DialogContent>
-              <TextField
-                autoFocus
-                margin="dense"
-                label="Note Text"
-                type="text"
-                fullWidth
-                variant="outlined"
-                value={noteText}
-                onChange={(e) => setNoteText(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    addBlock('note');
-                  }
-                }}
-              />
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setIsNoteDialogOpen(false)} color="secondary">
-                Cancel
-              </Button>
-              <Button onClick={() => addBlock('note')} color="primary" variant="contained">
-                Add
-              </Button>
-            </DialogActions>
-          </Dialog>
-
-          {/* Dialog for Adding Rest */}
-          <Dialog open={isRestDialogOpen} onClose={() => setIsRestDialogOpen(false)}>
-            <DialogTitle>Add Rest Period</DialogTitle>
-            <DialogContent>
-              <TextField
-                autoFocus
-                margin="dense"
-                label="Rest Duration (seconds)"
-                type="number"
-                fullWidth
-                variant="outlined"
-                value={restDuration}
-                onChange={(e) => setRestDuration(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    addBlock('rest');
-                  }
-                }}
-              />
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setIsRestDialogOpen(false)} color="secondary">
-                Cancel
-              </Button>
-              <Button onClick={() => addBlock('rest')} color="primary" variant="contained">
-                Add
-              </Button>
-            </DialogActions>
-          </Dialog>
-
-          <Divider sx={{ my: 3, borderColor: 'rgba(255,255,255,0.1)' }} />
-
-          {/* List of Created Workouts */}
-          <Typography variant="h6" sx={{ color: 'text.primary', mb: 2 }}>
-            My Workouts
-          </Typography>
-
-          {createdWorkouts.length === 0 ? (
-            <Typography variant="body2" color="textSecondary" sx={{ textAlign: 'center' }}>
-              No saved workouts.
-            </Typography>
-          ) : (
-            createdWorkouts.map((workout) => (
-              <Accordion
-                key={workout.id}
-                elevation={3}
-                sx={{
-                  mb: 1.5,
-                  borderRadius: '12px !important',
-                  '&:before': { display: 'none' }, // Hides the default Accordion border
-                }}
-              >
-                <AccordionSummary
-                  expandIcon={<ExpandMoreIcon sx={{ color: 'text.secondary' }} />}
-                  aria-controls={`panel-${workout.id}-content`}
-                  id={`panel-${workout.id}-header`}
-                >
-                  <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
-                    <FitnessCenterIcon sx={{ mr: 2, color: 'primary.main' }} />
-                    <Box sx={{ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-                      <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                        {workout.name}
                       </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        {workout.date ? formatDate(workout.date) : 'No date'}
-                      </Typography>
-                    </Box>
-                  </Box>
-                  <Box sx={{ flexShrink: 0 }}>
-                    <IconButton
-                      aria-label="edit"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenWorkoutNameDialog(workout);
-                      }}
-                      size="small"
-                      sx={{ mr: 1 }}
-                    >
-                      <EditIcon fontSize="small" color="info" />
+                    }
+                    secondary={
+                      block.type === 'plannedSet'
+                        ? `${block.plannedSetDetails.sets}x${block.plannedSetDetails.reps} @ ${block.plannedSetDetails.weight} kg, Rest: ${block.plannedSetDetails.restTime}s`
+                        : block.noteText
+                    }
+                  />
+                </ListItem>
+              ))
+            )}
+          </List>
+
+          <Divider sx={{ my: 2 }}>Add from Planned Sets</Divider>
+
+          <List sx={{ width: '100%', maxHeight: '30vh', overflowY: 'auto', bgcolor: 'background.default', borderRadius: 2 }}>
+            {plannedWorkouts.length === 0 ? (
+              <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', p: 2 }}>
+                No planned sets found. Go to the "Sets" tab to create some!
+              </Typography>
+            ) : (
+              plannedWorkouts.map((workout) => (
+                <ListItem
+                  key={workout.id}
+                  secondaryAction={
+                    <IconButton edge="end" aria-label="add" onClick={() => handleAddPlannedSet(workout)}>
+                      <AddIcon color="primary" />
                     </IconButton>
-                    <IconButton
-                      aria-label="delete"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteCreatedWorkout(workout.id);
-                      }}
-                      size="small"
-                    >
-                      <DeleteIcon fontSize="small" color="error" />
-                    </IconButton>
-                  </Box>
-                </AccordionSummary>
-                <AccordionDetails>
-                  <List disablePadding>
-                    {workout.blocks.map((block, blockIndex) => (
-                      <ListItem key={blockIndex} disableGutters>
-                        <ListItemIcon sx={{ minWidth: '32px' }}>
-                          {block.type === 'note' && <NotesIcon color="info" />}
-                          {block.type === 'rest' && <TimerIcon color="warning" />}
-                          {block.type === 'plannedSet' && <FitnessCenterIcon color="success" />}
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={
-                            block.type === 'note'
-                              ? `Note: ${block.text}`
-                              : block.type === 'rest'
-                                ? `Rest: ${block.duration} seconds`
-                                : `${block.plannedSetDetails.exercise} - ${block.plannedSetDetails.sets}x${block.plannedSetDetails.reps} @ ${block.plannedSetDetails.weight}kg`
-                          }
-                          sx={{ my: 0 }}
-                          primaryTypographyProps={{
-                            variant: 'body2',
-                            color: 'text.secondary'
-                          }}
-                        />
-                      </ListItem>
-                    ))}
-                  </List>
-                  <Box sx={{ mt: 2, textAlign: 'center' }}>
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      onClick={() => handleStartWorkoutSession(workout)}
-                      startIcon={<PlayArrowIcon />}
-                      sx={{ borderRadius: '8px', px: 4, py: 1.5 }}
-                    >
-                      Start Workout
-                    </Button>
-                  </Box>
-                </AccordionDetails>
-              </Accordion>
-            ))
-          )}
-        </>
-      )}
-    </Paper>
+                  }
+                >
+                  <ListItemText
+                    primary={workout.exercise}
+                    secondary={`${workout.sets}x${workout.reps} @ ${workout.weight} kg, Rest: ${workout.restTime}s`}
+                  />
+                </ListItem>
+              ))
+            )}
+          </List>
+        </Paper>
+      </Modal>
+
+      <Modal open={isAddNoteModalOpen} onClose={() => setIsAddNoteModalOpen(false)}>
+        <Paper sx={{ ...style, width: { xs: '90%', sm: '400px' } }}>
+          <Typography variant="h6" component="h2">Add a Note</Typography>
+          <TextField
+            label="Note Text"
+            multiline
+            rows={4}
+            fullWidth
+            value={newNoteText}
+            onChange={(e) => setNewNoteText(e.target.value)}
+          />
+          <Button variant="contained" color="primary" onClick={handleAddNote} startIcon={<SaveIcon />}>
+            Save Note
+          </Button>
+        </Paper>
+      </Modal>
+    </Box>
   );
 };
 
