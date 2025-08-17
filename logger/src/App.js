@@ -290,8 +290,7 @@ const App = () => {
       const unsubscribeSession = onSnapshot(sessionDocRef.current, (docSnap) => {
         if (docSnap.exists() && docSnap.data().active) {
           const data = docSnap.data();
-          // The fix is here: Update the component's state with the Firestore data
-          setActiveWorkoutSession(data.activeWorkoutSession); 
+          setActiveWorkoutSession(data.activeWorkoutSession);
           setPlaybackBlocks(data.playbackBlocks || []);
           setTimerSecondsLeft(data.timerSecondsLeft || 0);
           setInitialRestDuration(data.initialRestDuration || 0);
@@ -338,6 +337,7 @@ const App = () => {
     if (isTimerRunning && timerSecondsLeft > 0) {
       timerIntervalRef.current = setInterval(async () => {
         const newTime = timerSecondsLeft - 1;
+        // The fix is here: Use `{ merge: true }` to only update the timerSecondsLeft field
         await setDoc(sessionDocRef.current, { timerSecondsLeft: newTime }, { merge: true });
       }, 1000);
     } else if (timerSecondsLeft === 0 && isTimerRunning) {
@@ -350,11 +350,9 @@ const App = () => {
 
   // Effect to manage elapsed time display
   useEffect(() => {
-    // This hook will now trigger correctly because activeWorkoutSession is being updated
     if (activeWorkoutSession && activeWorkoutSession.startTime) {
-      clearInterval(elapsedTimerIntervalRef.current); // Clear any existing interval
+      clearInterval(elapsedTimerIntervalRef.current);
       elapsedTimerIntervalRef.current = setInterval(() => {
-        // The core fix: use .toMillis() to get the numerical timestamp
         const startTimeMillis = activeWorkoutSession.startTime.toMillis();
         const elapsed = Math.floor((Date.now() - startTimeMillis) / 1000);
         setElapsedSeconds(elapsed);
