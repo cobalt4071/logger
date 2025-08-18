@@ -395,7 +395,7 @@ const WorkoutTracker = ({
                       elevation={block.status === 'active' ? 5 : 1}
                       sx={{
                         mb: 0.5,
-                        p: 1,
+                        p: block.type === 'rest' ? 0.5 : 1,
                         borderRadius: 0,
                         bgcolor: 'background.paper',
                         opacity: block.status === 'completed' ? 0.6 : 1,
@@ -452,7 +452,7 @@ const WorkoutTracker = ({
                               />
                             }
                             label=""
-                            sx={{ ml: 1, mr: -1.5 }}
+                            sx={{ ml: 1, mr: 0 }}
                           />
                         </>
                       )}
