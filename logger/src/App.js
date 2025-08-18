@@ -449,6 +449,15 @@ const App = () => {
       return;
     }
 
+    const nameExists = plannedWorkouts.some(
+      workout => workout.exercise.toLowerCase() === exercise.trim().toLowerCase() && workout.id !== editingWorkoutId
+    );
+
+    if (nameExists) {
+      showSnackbar('A planned set with this exercise name already exists. Please choose a different name.', 'warning');
+      return;
+    }
+
     const workoutData = {
       exercise: exercise.trim(),
       sets: parseInt(sets),
