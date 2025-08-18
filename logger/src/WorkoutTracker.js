@@ -396,7 +396,7 @@ const WorkoutTracker = ({
                       sx={{
                         mb: 0.5,
                         p: 1,
-                        borderRadius: '8px',
+                        borderRadius: 0,
                         bgcolor: 'background.paper',
                         opacity: block.status === 'completed' ? 0.6 : 1,
                         border: block.status === 'active' ? '2px solid' : '1px solid transparent',
@@ -413,8 +413,8 @@ const WorkoutTracker = ({
                           <ListItemIcon sx={{ minWidth: '32px', mr: 1, alignSelf: 'center' }}>
                             <FitnessCenterIcon fontSize="medium" color="success" />
                           </ListItemIcon>
-                          <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'space-around', alignItems: 'center', gap: 1 }}>
-                              <Box sx={{ textAlign: 'center' }}>
+                          <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1 }}>
+                              <Box sx={{ textAlign: 'center', flexGrow: 1 }}>
                                 <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textTransform: 'uppercase', fontSize: '0.6rem' }}>
                                   Set
                                 </Typography>
@@ -423,14 +423,14 @@ const WorkoutTracker = ({
                                 </Typography>
                               </Box>
                               <Divider orientation="vertical" flexItem sx={{ mx: 1 }}/>
-                              <Box sx={{ textAlign: 'center' }}>
+                              <Box sx={{ textAlign: 'center', flexGrow: 1 }}>
                                 <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textTransform: 'uppercase', fontSize: '0.6rem' }}>
                                   Weight
                                 </Typography>
                                 <Typography variant="h6" sx={{ fontWeight: 'bold' }}>{block.weight}</Typography>
                               </Box>
                               <Divider orientation="vertical" flexItem sx={{ mx: 1 }}/>
-                              <Box sx={{ textAlign: 'center' }}>
+                              <Box sx={{ textAlign: 'center', flexGrow: 1 }}>
                                 <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textTransform: 'uppercase', fontSize: '0.6rem' }}>
                                   Reps
                                 </Typography>
