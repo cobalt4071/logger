@@ -169,15 +169,6 @@ const WorkoutTracker = ({
         return;
     }
 
-    const nameExists = createdWorkouts.some(
-        workout => workout.name.toLowerCase() === workoutNameInput.trim().toLowerCase() && workout.id !== editingCreatedWorkoutId
-    );
-
-    if (nameExists) {
-        showSnackbar('A workout with this name already exists. Please choose a different name.', 'warning');
-        return;
-    }
-
     if (editingCreatedWorkoutId) {
       setCurrentWorkoutName(workoutNameInput.trim());
       showSnackbar(`Workout name updated to "${workoutNameInput.trim()}"!`, 'success');
