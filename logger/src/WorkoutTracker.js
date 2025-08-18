@@ -38,13 +38,14 @@ import EditIcon from '@mui/icons-material/Edit';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'; // Add this import
+import CheckIcon from '@mui/icons-material/Check';
 
 // Import Firebase modules for Firestore operations
 import { collection, addDoc, query, onSnapshot, orderBy, doc, setDoc, deleteDoc } from "firebase/firestore";
 
 
 // WorkoutTracker component
-const WorkoutTracker = ({
+const WorkoutTracker = ({ 
   userId, appId, db, plannedWorkouts, showSnackbar,
   activeWorkoutSession, playbackBlocks, timerSecondsLeft, initialRestDuration, isTimerRunning,
   handleStartWorkoutSession, handleBlockCompletion, handlePauseResume, handleStopWorkout,
@@ -66,6 +67,7 @@ const WorkoutTracker = ({
   // States for controlling dialogs
   const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
   const [isRestDialogOpen, setIsRestDialogOpen] = useState(false);
+  const [isFinishConfirmDialogOpen, setIsFinishConfirmDialogOpen] = useState(false);
 
   // Refs for drag and drop functionality
   const dragItem = useRef(null);
@@ -737,7 +739,7 @@ const WorkoutTracker = ({
                               ? `Note: ${block.text}`
                               : block.type === 'rest'
                               ? `Rest: ${block.duration} seconds`
-                              : `${block.plannedSetDetails.exercise} - ${block.plannedSetDetails.sets} sets x ${block.plannedSetDetails.reps} reps @ ${block.plannedSetDetails.weight}kg`
+                              : `${block.plannedSetDetails.exercise}: ${block.plannedSetDetails.sets} sets x ${block.plannedSetDetails.reps} reps @ ${block.plannedSetDetails.weight}kg`
                           }
                           sx={{ my: 0 }}
                         />
@@ -763,7 +765,7 @@ const WorkoutTracker = ({
             </>
           ) : (
             <Typography variant="body2" color="textSecondary" sx={{ textAlign: 'center', mt: 2, mb: 3 }}>
-              {userId ? 'Use the \'+\' button above to create your first workout session!' : 'Sign in to create and manage your workout sessions.'}
+              {userId ? 'Use the \'+' button above to create your first workout session!' : 'Sign in to create and manage your workout sessions.'}
             </Typography>
           )}
 
@@ -858,6 +860,21 @@ const WorkoutTracker = ({
             </DialogActions>
           </Dialog>
 
+          <Dialog open={isFinishConfirmDialogOpen} onClose={() => setIsFinishConfirmDialogOpen(false)}>
+            <DialogTitle>Finish Workout</DialogTitle>
+            <DialogContent>
+              <Typography>Are you sure you want to finish this workout?</Typography>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setIsFinishConfirmDialogOpen(false)} color="secondary">
+                Cancel
+              </Button>
+              <Button onClick={() => { handleStopWorkout(); setIsFinishConfirmDialogOpen(false); }} color="primary">
+                Finish
+              </Button>
+            </DialogActions>
+          </Dialog>
+
           {/* New "Created Workouts" list using Accordion */}
           <Box sx={{ mt: 4, mb: 2, p: 1, borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
             {createdWorkouts.length === 0 ? (
@@ -907,6 +924,16 @@ const WorkoutTracker = ({
                                 >
                                     <PlayArrowIcon />
                                 </IconButton>
+                                {activeWorkoutSession && activeWorkoutSession.id === workout.id && (
+                                    <IconButton
+                                        aria-label="finish"
+                                        color="success"
+                                        onClick={(e) => { e.stopPropagation(); setIsFinishConfirmDialogOpen(true); }}
+                                        size="small"
+                                    >
+                                        <CheckIcon />
+                                    </IconButton>
+                                )}
                                 <IconButton
                                     aria-label="edit"
                                     color="primary"
