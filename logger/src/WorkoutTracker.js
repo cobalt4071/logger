@@ -401,17 +401,42 @@ const WorkoutTracker = ({
                 >
                   {block.type === 'plannedSetInstance' && (
                     <>
-                      <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
-                        <ListItemIcon sx={{ minWidth: '40px' }}>
-                          <FitnessCenterIcon fontSize="medium" color="success" />
-                        </ListItemIcon>
-                        <Box>
-                          <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                            {block.exercise} - Set {block.currentSetNum} of {block.totalSets}
-                          </Typography>
-                          <Typography variant="body2" color="textSecondary">
-                            {block.reps} reps @ {block.weight}kg
-                          </Typography>
+                      <ListItemIcon sx={{ minWidth: '40px', mr: 1.5, alignSelf: 'flex-start', mt: 1 }}>
+                        <FitnessCenterIcon fontSize="large" color="success" />
+                      </ListItemIcon>
+                      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                        <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                          {block.exercise}
+                        </Typography>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1, pr: { xs: 1, sm: 4 } }}>
+                          <Box sx={{ textAlign: 'center' }}>
+                            <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textTransform: 'uppercase' }}>
+                              Log
+                            </Typography>
+                            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                              {index + 1}
+                            </Typography>
+                          </Box>
+                          <Box sx={{ textAlign: 'center' }}>
+                            <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textTransform: 'uppercase' }}>
+                              Set
+                            </Typography>
+                            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                              {block.currentSetNum}
+                            </Typography>
+                          </Box>
+                          <Box sx={{ textAlign: 'center' }}>
+                            <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textTransform: 'uppercase' }}>
+                              Weight (kg)
+                            </Typography>
+                            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>{block.weight}</Typography>
+                          </Box>
+                          <Box sx={{ textAlign: 'center' }}>
+                            <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textTransform: 'uppercase' }}>
+                              Reps
+                            </Typography>
+                            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>{block.reps}</Typography>
+                          </Box>
                         </Box>
                       </Box>
                       <FormControlLabel
@@ -422,14 +447,14 @@ const WorkoutTracker = ({
                             disabled={block.status !== 'active'}
                             color="success"
                             sx={{
-                              width: 36,
-                              height: 36,
+                              width: 48,
+                              height: 48,
                               '& .MuiSvgIcon-root': { fontSize: 36 },
                             }}
                           />
                         }
                         label=""
-                        sx={{ ml: 1 }}
+                        sx={{ ml: 1, mr: -1.5 }}
                       />
                     </>
                   )}
