@@ -386,7 +386,7 @@ const WorkoutTracker = ({
                   <React.Fragment key={index}>
                     {/* Conditionally render the exercise name as a heading */}
                     {shouldRenderHeading && (
-                      <Typography variant="h6" sx={{ mt: 3, mb: 1.5, color: 'text.primary', fontWeight: 'bold' }}>
+                      <Typography variant="subtitle1" sx={{ mt: 3, mb: 1, color: 'text.primary', fontWeight: 'bold' }}>
                         {block.exercise}
                       </Typography>
                     )}
