@@ -386,25 +386,31 @@ const WorkoutTracker = ({
                   <React.Fragment key={index}>
                     {/* Conditionally render the exercise name as a heading */}
                     {shouldRenderHeading && (
-                      <Typography variant="subtitle1" sx={{ mt: 1, mb: 0.5, color: 'text.primary', fontWeight: 'bold' }}>
+                      <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, color: 'text.primary', fontWeight: 'bold' }}>
                         {block.exercise}
                       </Typography>
                     )}
 
                     <Paper
-                      elevation={block.status === 'active' ? 5 : 1}
+                      elevation={block.status === 'active' ? 3 : 1}
                       sx={{
-                        mb: 0.5,
-                        p: block.type === 'rest' ? 0.5 : 1,
-                        borderRadius: 0,
-                        bgcolor: 'background.paper',
+                        mb: 1,
+                        p: 1.5,
+                        borderRadius: 2,
+                        bgcolor: block.status === 'active' ? 'action.hover' : 'background.paper',
                         opacity: block.status === 'completed' ? 0.6 : 1,
-                        border: block.status === 'active' ? '2px solid' : '1px solid transparent',
-                        borderColor: block.status === 'active' ? 'primary.main' : 'transparent',
+                        borderLeft: '5px solid',
+                        borderColor:
+                          block.status === 'active'
+                            ? 'primary.main'
+                            : block.status === 'completed'
+                            ? 'success.dark'
+                            : 'transparent',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         position: 'relative',
+                        transition: 'background-color 0.3s, border-color 0.3s',
                       }}
                       ref={block.status === 'active' ? activeBlockRef : null}
                     >
@@ -418,7 +424,7 @@ const WorkoutTracker = ({
                                 <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textTransform: 'uppercase', fontSize: '0.6rem' }}>
                                   Set
                                 </Typography>
-                                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                                   {block.currentSetNum}
                                 </Typography>
                               </Box>
@@ -427,14 +433,14 @@ const WorkoutTracker = ({
                                 <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textTransform: 'uppercase', fontSize: '0.6rem' }}>
                                   Weight
                                 </Typography>
-                                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>{block.weight}</Typography>
+                                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>{block.weight}</Typography>
                               </Box>
                               <Divider orientation="vertical" flexItem sx={{ mx: 1 }}/>
                               <Box sx={{ textAlign: 'center', flexGrow: 1 }}>
                                 <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textTransform: 'uppercase', fontSize: '0.6rem' }}>
                                   Reps
                                 </Typography>
-                                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>{block.reps}</Typography>
+                                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>{block.reps}</Typography>
                               </Box>
                           </Box>
                           <FormControlLabel
@@ -492,7 +498,7 @@ const WorkoutTracker = ({
                           {/* Conditional rendering of timer and skip button based on active status */}
                           {block.status === 'active' ? (
                             <Box sx={{ textAlign: 'right', ml: 2, position: 'relative' }}>
-                              <Typography variant="h5" sx={{ color: block.originatingPlannedSet ? 'warning.main' : 'info.main', fontWeight: 'bold' }}>
+                              <Typography variant="h6" sx={{ color: block.originatingPlannedSet ? 'warning.main' : 'info.main', fontWeight: 'bold' }}>
                                 {timerSecondsLeft}s
                               </Typography>
                               {initialRestDuration > 0 && (
@@ -515,7 +521,7 @@ const WorkoutTracker = ({
                             </Box>
                           ) : (
                             // Display static rest duration for non-active rest blocks
-                            <Typography variant="h5" sx={{ color: block.originatingPlannedSet ? 'warning.main' : 'info.main', fontWeight: 'bold', ml: 2 }}>
+                            <Typography variant="h6" sx={{ color: block.originatingPlannedSet ? 'warning.main' : 'info.main', fontWeight: 'bold', ml: 2 }}>
                               {block.duration}s
                             </Typography>
                           )}
