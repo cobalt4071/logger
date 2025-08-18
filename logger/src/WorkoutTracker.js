@@ -386,7 +386,7 @@ const WorkoutTracker = ({
                   <React.Fragment key={index}>
                     {/* Conditionally render the exercise name as a heading */}
                     {shouldRenderHeading && (
-                      <Typography variant="subtitle1" sx={{ mt: 3, mb: 1, color: 'text.primary', fontWeight: 'bold' }}>
+                      <Typography variant="subtitle1" sx={{ mt: 1, mb: 0.5, color: 'text.primary', fontWeight: 'bold' }}>
                         {block.exercise}
                       </Typography>
                     )}
@@ -394,14 +394,13 @@ const WorkoutTracker = ({
                     <Paper
                       elevation={block.status === 'active' ? 5 : 1}
                       sx={{
-                        mb: 1,
-                        p: block.type === 'plannedSetInstance' ? 1.5 : 1,
+                        mb: 0.5,
+                        p: 1,
                         borderRadius: '8px',
                         bgcolor: 'background.paper',
                         opacity: block.status === 'completed' ? 0.6 : 1,
                         border: block.status === 'active' ? '2px solid' : '1px solid transparent',
                         borderColor: block.status === 'active' ? 'primary.main' : 'transparent',
-                        minHeight: block.type === 'plannedSetInstance' ? 'auto' : 'auto', // Adjusted minHeight
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
@@ -411,26 +410,28 @@ const WorkoutTracker = ({
                     >
                       {block.type === 'plannedSetInstance' && (
                         <>
-                          <ListItemIcon sx={{ minWidth: '40px', mr: 1.5, alignSelf: 'center' }}>
-                            <FitnessCenterIcon fontSize="large" color="success" />
+                          <ListItemIcon sx={{ minWidth: '32px', mr: 1, alignSelf: 'center' }}>
+                            <FitnessCenterIcon fontSize="medium" color="success" />
                           </ListItemIcon>
-                          <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
+                          <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'space-around', alignItems: 'center', gap: 1 }}>
                               <Box sx={{ textAlign: 'center' }}>
-                                <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textTransform: 'uppercase' }}>
+                                <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textTransform: 'uppercase', fontSize: '0.6rem' }}>
                                   Set
                                 </Typography>
                                 <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                                   {block.currentSetNum}
                                 </Typography>
                               </Box>
+                              <Divider orientation="vertical" flexItem sx={{ mx: 1 }}/>
                               <Box sx={{ textAlign: 'center' }}>
-                                <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textTransform: 'uppercase' }}>
-                                  Weight (kg)
+                                <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textTransform: 'uppercase', fontSize: '0.6rem' }}>
+                                  Weight
                                 </Typography>
                                 <Typography variant="h6" sx={{ fontWeight: 'bold' }}>{block.weight}</Typography>
                               </Box>
+                              <Divider orientation="vertical" flexItem sx={{ mx: 1 }}/>
                               <Box sx={{ textAlign: 'center' }}>
-                                <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textTransform: 'uppercase' }}>
+                                <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textTransform: 'uppercase', fontSize: '0.6rem' }}>
                                   Reps
                                 </Typography>
                                 <Typography variant="h6" sx={{ fontWeight: 'bold' }}>{block.reps}</Typography>
@@ -444,9 +445,9 @@ const WorkoutTracker = ({
                                 disabled={block.status !== 'active'}
                                 color="success"
                                 sx={{
-                                  width: 48,
-                                  height: 48,
-                                  '& .MuiSvgIcon-root': { fontSize: 36 },
+                                  width: 40,
+                                  height: 40,
+                                  '& .MuiSvgIcon-root': { fontSize: 32 },
                                 }}
                               />
                             }
@@ -460,10 +461,10 @@ const WorkoutTracker = ({
                         <>
                           <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
                             <ListItemIcon sx={{ minWidth: '32px' }}>
-                              <NotesIcon fontSize="medium" color="info" />
+                              <NotesIcon fontSize="small" color="info" />
                             </ListItemIcon>
                             <Box>
-                              <Typography variant="body1" sx={{ color: 'info.main', fontWeight: 'bold' }}>
+                              <Typography variant="body2" sx={{ color: 'info.main', fontWeight: 'bold' }}>
                                 Note:
                               </Typography>
                               <Typography variant="body2">{block.text}</Typography>
@@ -475,15 +476,15 @@ const WorkoutTracker = ({
                       {block.type === 'rest' && (
                         <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                           <ListItemIcon sx={{ minWidth: '32px' }}>
-                            <TimerIcon fontSize="medium" color={block.originatingPlannedSet ? 'warning' : 'info'} />
+                            <TimerIcon fontSize="small" color={block.originatingPlannedSet ? 'warning' : 'info'} />
                           </ListItemIcon>
-                          <Box sx={{ flexGrow: 1 }}>
-                            <Typography variant="body1" sx={{ color: block.originatingPlannedSet ? 'warning.main' : 'info.main', fontWeight: 'bold' }}>
-                              Rest Time
+                          <Box sx={{ flexGrow: 1, ml: 1 }}>
+                            <Typography variant="body2" sx={{ color: block.originatingPlannedSet ? 'warning.main' : 'info.main', fontWeight: 'bold' }}>
+                              Rest
                             </Typography>
-                            <Typography variant="body2" color="textSecondary">
+                            <Typography variant="caption" color="textSecondary">
                               {block.originatingPlannedSet ?
-                                `After ${block.originatingPlannedSet} Set ${block.originatingSetNum}`
+                                `${block.originatingPlannedSet} Set ${block.originatingSetNum}`
                                 : 'General rest period'
                               }
                             </Typography>
