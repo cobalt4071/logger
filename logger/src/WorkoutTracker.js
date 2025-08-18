@@ -382,16 +382,16 @@ const WorkoutTracker = ({
                   elevation={block.status === 'active' ? 5 : 1}
                   sx={{
                     mb: 1,
-                    p: 1.5,
+                    p: block.type === 'plannedSetInstance' ? 1.5 : 1,
                     borderRadius: '8px',
                     bgcolor:
                       block.status === 'active'
                         ? 'background.paper'
                         : 'background.paper',
                     opacity: block.status === 'completed' ? 0.6 : 1,
-                    border: block.status === 'active' ? '2px solid' : 'none',
+                    border: block.status === 'active' ? '2px solid' : '1px solid transparent',
                     borderColor: block.status === 'active' ? 'primary.main' : 'transparent',
-                    minHeight: '60px',
+                    minHeight: block.type === 'plannedSetInstance' ? '80px' : 'auto',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
@@ -408,15 +408,7 @@ const WorkoutTracker = ({
                         <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
                           {block.exercise}
                         </Typography>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1, pr: { xs: 1, sm: 4 } }}>
-                          <Box sx={{ textAlign: 'center' }}>
-                            <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textTransform: 'uppercase' }}>
-                              Log
-                            </Typography>
-                            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                              {index + 1}
-                            </Typography>
-                          </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-around', mt: 1, pr: { xs: 1, sm: 4 } }}>
                           <Box sx={{ textAlign: 'center' }}>
                             <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textTransform: 'uppercase' }}>
                               Set
@@ -462,7 +454,7 @@ const WorkoutTracker = ({
                   {block.type === 'note' && (
                     <>
                       <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
-                        <ListItemIcon sx={{ minWidth: '40px' }}>
+                        <ListItemIcon sx={{ minWidth: '32px' }}>
                           <NotesIcon fontSize="medium" color="info" />
                         </ListItemIcon>
                         <Box>
@@ -477,7 +469,7 @@ const WorkoutTracker = ({
 
                   {block.type === 'rest' && (
                     <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                      <ListItemIcon sx={{ minWidth: '40px' }}>
+                      <ListItemIcon sx={{ minWidth: '32px' }}>
                         <TimerIcon fontSize="medium" color={block.originatingPlannedSet ? 'warning' : 'info'} />
                       </ListItemIcon>
                       <Box sx={{ flexGrow: 1 }}>
