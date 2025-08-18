@@ -376,151 +376,154 @@ const WorkoutTracker = ({
 
           {playbackBlocks.length > 0 ? (
             <List sx={{ maxHeight: 'calc(100vh - 250px)', overflowY: 'auto', pr: 1 }}>
-              {playbackBlocks.map((block, index) => (
-                <Paper
-                  key={index}
-                  elevation={block.status === 'active' ? 5 : 1}
-                  sx={{
-                    mb: 1,
-                    p: block.type === 'plannedSetInstance' ? 1.5 : 1,
-                    borderRadius: '8px',
-                    bgcolor:
-                      block.status === 'active'
-                        ? 'background.paper'
-                        : 'background.paper',
-                    opacity: block.status === 'completed' ? 0.6 : 1,
-                    border: block.status === 'active' ? '2px solid' : '1px solid transparent',
-                    borderColor: block.status === 'active' ? 'primary.main' : 'transparent',
-                    minHeight: block.type === 'plannedSetInstance' ? '80px' : 'auto',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    position: 'relative',
-                  }}
-                  ref={block.status === 'active' ? activeBlockRef : null}
-                >
-                  {block.type === 'plannedSetInstance' && (
-                    <>
-                      <ListItemIcon sx={{ minWidth: '40px', mr: 1.5, alignSelf: 'flex-start', mt: 1 }}>
-                        <FitnessCenterIcon fontSize="large" color="success" />
-                      </ListItemIcon>
-                      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                        <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                          {block.exercise}
-                        </Typography>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-around', mt: 1, pr: { xs: 1, sm: 4 } }}>
-                          <Box sx={{ textAlign: 'center' }}>
-                            <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textTransform: 'uppercase' }}>
-                              Set
-                            </Typography>
-                            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                              {block.currentSetNum}
-                            </Typography>
+              {playbackBlocks.map((block, index) => {
+                // Determine if this block is an exercise and if its predecessor was a different exercise or not an exercise at all.
+                const isExercise = block.type === 'plannedSetInstance';
+                const prevBlock = index > 0 ? playbackBlocks[index - 1] : null;
+                const shouldRenderHeading = isExercise && (!prevBlock || prevBlock.type !== 'plannedSetInstance' || prevBlock.exercise !== block.exercise);
+
+                return (
+                  <React.Fragment key={index}>
+                    {/* Conditionally render the exercise name as a heading */}
+                    {shouldRenderHeading && (
+                      <Typography variant="h6" sx={{ mt: 3, mb: 1.5, color: 'text.primary', fontWeight: 'bold' }}>
+                        {block.exercise}
+                      </Typography>
+                    )}
+
+                    <Paper
+                      elevation={block.status === 'active' ? 5 : 1}
+                      sx={{
+                        mb: 1,
+                        p: block.type === 'plannedSetInstance' ? 1.5 : 1,
+                        borderRadius: '8px',
+                        bgcolor: 'background.paper',
+                        opacity: block.status === 'completed' ? 0.6 : 1,
+                        border: block.status === 'active' ? '2px solid' : '1px solid transparent',
+                        borderColor: block.status === 'active' ? 'primary.main' : 'transparent',
+                        minHeight: block.type === 'plannedSetInstance' ? 'auto' : 'auto', // Adjusted minHeight
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        position: 'relative',
+                      }}
+                      ref={block.status === 'active' ? activeBlockRef : null}
+                    >
+                      {block.type === 'plannedSetInstance' && (
+                        <>
+                          <ListItemIcon sx={{ minWidth: '40px', mr: 1.5, alignSelf: 'center' }}>
+                            <FitnessCenterIcon fontSize="large" color="success" />
+                          </ListItemIcon>
+                          <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
+                              <Box sx={{ textAlign: 'center' }}>
+                                <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textTransform: 'uppercase' }}>
+                                  Set
+                                </Typography>
+                                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                                  {block.currentSetNum}
+                                </Typography>
+                              </Box>
+                              <Box sx={{ textAlign: 'center' }}>
+                                <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textTransform: 'uppercase' }}>
+                                  Weight (kg)
+                                </Typography>
+                                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>{block.weight}</Typography>
+                              </Box>
+                              <Box sx={{ textAlign: 'center' }}>
+                                <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textTransform: 'uppercase' }}>
+                                  Reps
+                                </Typography>
+                                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>{block.reps}</Typography>
+                              </Box>
                           </Box>
-                          <Box sx={{ textAlign: 'center' }}>
-                            <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textTransform: 'uppercase' }}>
-                              Weight (kg)
-                            </Typography>
-                            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>{block.weight}</Typography>
-                          </Box>
-                          <Box sx={{ textAlign: 'center' }}>
-                            <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textTransform: 'uppercase' }}>
-                              Reps
-                            </Typography>
-                            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>{block.reps}</Typography>
-                          </Box>
-                        </Box>
-                      </Box>
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            checked={block.status === 'completed'}
-                            onChange={() => handleBlockCompletion(index)}
-                            disabled={block.status !== 'active'}
-                            color="success"
-                            sx={{
-                              width: 48,
-                              height: 48,
-                              '& .MuiSvgIcon-root': { fontSize: 36 },
-                            }}
+                          <FormControlLabel
+                            control={
+                              <Checkbox
+                                checked={block.status === 'completed'}
+                                onChange={() => handleBlockCompletion(index)}
+                                disabled={block.status !== 'active'}
+                                color="success"
+                                sx={{
+                                  width: 48,
+                                  height: 48,
+                                  '& .MuiSvgIcon-root': { fontSize: 36 },
+                                }}
+                              />
+                            }
+                            label=""
+                            sx={{ ml: 1, mr: -1.5 }}
                           />
-                        }
-                        label=""
-                        sx={{ ml: 1, mr: -1.5 }}
-                      />
-                    </>
-                  )}
-
-                  {block.type === 'note' && (
-                    <>
-                      <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
-                        <ListItemIcon sx={{ minWidth: '32px' }}>
-                          <NotesIcon fontSize="medium" color="info" />
-                        </ListItemIcon>
-                        <Box>
-                          <Typography variant="body1" sx={{ color: 'info.main', fontWeight: 'bold' }}>
-                            Note:
-                          </Typography>
-                          <Typography variant="body2">{block.text}</Typography>
-                        </Box>
-                      </Box>
-                    </>
-                  )}
-
-                  {block.type === 'rest' && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                      <ListItemIcon sx={{ minWidth: '32px' }}>
-                        <TimerIcon fontSize="medium" color={block.originatingPlannedSet ? 'warning' : 'info'} />
-                      </ListItemIcon>
-                      <Box sx={{ flexGrow: 1 }}>
-                        <Typography variant="body1" sx={{ color: block.originatingPlannedSet ? 'warning.main' : 'info.main', fontWeight: 'bold' }}>
-                          Rest Time
-                        </Typography>
-                        <Typography variant="body2" color="textSecondary">
-                          {block.originatingPlannedSet ?
-                            `After ${block.originatingPlannedSet} Set ${block.originatingSetNum}`
-                            : 'General rest period'
-                          }
-                        </Typography>
-                      </Box>
-                      {/* Conditional rendering of timer and skip button based on active status */}
-                      {block.status === 'active' ? (
-                        <Box sx={{ textAlign: 'right', ml: 2, position: 'relative' }}>
-                          <Typography variant="h5" sx={{ color: block.originatingPlannedSet ? 'warning.main' : 'info.main', fontWeight: 'bold' }}>
-                            {timerSecondsLeft}s
-                          </Typography>
-                          {initialRestDuration > 0 && (
-                            <LinearProgress
-                              variant="determinate"
-                              value={((initialRestDuration - timerSecondsLeft) / initialRestDuration) * 100}
-                              color={block.originatingPlannedSet ? 'warning' : 'info'}
-                              sx={{ height: 4, borderRadius: 2, mt: 0.5 }}
-                            />
-                          )}
-                          <Button
-                            variant="outlined"
-                            color="secondary"
-                            size="small"
-                            onClick={() => {
-                                // App.js handles all timer state logic when advancing.
-                                // Just need to call the advance function.
-                                advanceToNextActiveBlock();
-                            }}
-                            sx={{ borderRadius: '8px', ml: 2, mt: 1 }}
-                          >
-                            Skip
-                          </Button>
-                        </Box>
-                      ) : (
-                        // Display static rest duration for non-active rest blocks
-                        <Typography variant="h5" sx={{ color: block.originatingPlannedSet ? 'warning.main' : 'info.main', fontWeight: 'bold', ml: 2 }}>
-                          {block.duration}s
-                        </Typography>
+                        </>
                       )}
-                    </Box>
-                  )}
-                </Paper>
-              ))}
+
+                      {block.type === 'note' && (
+                        <>
+                          <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
+                            <ListItemIcon sx={{ minWidth: '32px' }}>
+                              <NotesIcon fontSize="medium" color="info" />
+                            </ListItemIcon>
+                            <Box>
+                              <Typography variant="body1" sx={{ color: 'info.main', fontWeight: 'bold' }}>
+                                Note:
+                              </Typography>
+                              <Typography variant="body2">{block.text}</Typography>
+                            </Box>
+                          </Box>
+                        </>
+                      )}
+
+                      {block.type === 'rest' && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                          <ListItemIcon sx={{ minWidth: '32px' }}>
+                            <TimerIcon fontSize="medium" color={block.originatingPlannedSet ? 'warning' : 'info'} />
+                          </ListItemIcon>
+                          <Box sx={{ flexGrow: 1 }}>
+                            <Typography variant="body1" sx={{ color: block.originatingPlannedSet ? 'warning.main' : 'info.main', fontWeight: 'bold' }}>
+                              Rest Time
+                            </Typography>
+                            <Typography variant="body2" color="textSecondary">
+                              {block.originatingPlannedSet ?
+                                `After ${block.originatingPlannedSet} Set ${block.originatingSetNum}`
+                                : 'General rest period'
+                              }
+                            </Typography>
+                          </Box>
+                          {/* Conditional rendering of timer and skip button based on active status */}
+                          {block.status === 'active' ? (
+                            <Box sx={{ textAlign: 'right', ml: 2, position: 'relative' }}>
+                              <Typography variant="h5" sx={{ color: block.originatingPlannedSet ? 'warning.main' : 'info.main', fontWeight: 'bold' }}>
+                                {timerSecondsLeft}s
+                              </Typography>
+                              {initialRestDuration > 0 && (
+                                <LinearProgress
+                                  variant="determinate"
+                                  value={((initialRestDuration - timerSecondsLeft) / initialRestDuration) * 100}
+                                  color={block.originatingPlannedSet ? 'warning' : 'info'}
+                                  sx={{ height: 4, borderRadius: 2, mt: 0.5 }}
+                                />
+                              )}
+                              <Button
+                                variant="outlined"
+                                color="secondary"
+                                size="small"
+                                onClick={advanceToNextActiveBlock}
+                                sx={{ borderRadius: '8px', ml: 2, mt: 1 }}
+                              >
+                                Skip
+                              </Button>
+                            </Box>
+                          ) : (
+                            // Display static rest duration for non-active rest blocks
+                            <Typography variant="h5" sx={{ color: block.originatingPlannedSet ? 'warning.main' : 'info.main', fontWeight: 'bold', ml: 2 }}>
+                              {block.duration}s
+                            </Typography>
+                          )}
+                        </Box>
+                      )}
+                    </Paper>
+                  </React.Fragment>
+                );
+              })}
             </List>
           ) : (
             <Typography variant="body2" color="textSecondary" sx={{ textAlign: 'center', mt: 2 }}>
