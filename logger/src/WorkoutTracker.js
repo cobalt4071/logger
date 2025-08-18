@@ -480,51 +480,42 @@ const WorkoutTracker = ({
                       )}
 
                       {block.type === 'rest' && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                          <ListItemIcon sx={{ minWidth: '32px' }}>
-                            <TimerIcon fontSize="small" color={block.originatingPlannedSet ? 'warning' : 'info'} />
-                          </ListItemIcon>
-                          <Box sx={{ flexGrow: 1, ml: 1 }}>
-                            <Typography variant="body2" sx={{ color: block.originatingPlannedSet ? 'warning.main' : 'info.main', fontWeight: 'bold' }}>
-                              Rest
+                        <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', py: 0.5 }}>
+                            <ListItemIcon sx={{ minWidth: 'auto', mr: 1.5 }}>
+                                <TimerIcon fontSize="small" color={block.originatingPlannedSet ? 'warning' : 'info'} />
+                            </ListItemIcon>
+                            <Typography variant="body2" sx={{ fontWeight: 'bold', color: block.originatingPlannedSet ? 'warning.main' : 'info.main', mr: 1 }}>
+                                Rest
                             </Typography>
-                            <Typography variant="caption" color="textSecondary">
-                              {block.originatingPlannedSet ?
-                                `${block.originatingPlannedSet} Set ${block.originatingSetNum}`
-                                : 'General rest period'
-                              }
+                            <Typography variant="caption" color="textSecondary" sx={{ flexGrow: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {block.originatingPlannedSet ? `(${block.originatingPlannedSet} Set ${block.originatingSetNum})` : ''}
                             </Typography>
-                          </Box>
-                          {/* Conditional rendering of timer and skip button based on active status */}
-                          {block.status === 'active' ? (
-                            <Box sx={{ textAlign: 'right', ml: 2, position: 'relative' }}>
-                              <Typography variant="h6" sx={{ color: block.originatingPlannedSet ? 'warning.main' : 'info.main', fontWeight: 'bold' }}>
-                                {timerSecondsLeft}s
-                              </Typography>
-                              {initialRestDuration > 0 && (
-                                <LinearProgress
-                                  variant="determinate"
-                                  value={((initialRestDuration - timerSecondsLeft) / initialRestDuration) * 100}
-                                  color={block.originatingPlannedSet ? 'warning' : 'info'}
-                                  sx={{ height: 4, borderRadius: 2, mt: 0.5 }}
-                                />
-                              )}
-                              <Button
-                                variant="outlined"
-                                color="secondary"
-                                size="small"
-                                onClick={advanceToNextActiveBlock}
-                                sx={{ borderRadius: '8px', ml: 2, mt: 1 }}
-                              >
-                                Skip
-                              </Button>
-                            </Box>
-                          ) : (
-                            // Display static rest duration for non-active rest blocks
-                            <Typography variant="h6" sx={{ color: block.originatingPlannedSet ? 'warning.main' : 'info.main', fontWeight: 'bold', ml: 2 }}>
-                              {block.duration}s
-                            </Typography>
-                          )}
+                            {block.status === 'active' ? (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 1 }}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: block.originatingPlannedSet ? 'warning.main' : 'info.main' }}>
+                                        {timerSecondsLeft}s
+                                    </Typography>
+                                    <LinearProgress
+                                        variant="determinate"
+                                        value={((initialRestDuration - timerSecondsLeft) / initialRestDuration) * 100}
+                                        color={block.originatingPlannedSet ? 'warning' : 'info'}
+                                        sx={{ height: 6, borderRadius: 3, width: '50px' }}
+                                    />
+                                    <Button
+                                        variant="text"
+                                        color="secondary"
+                                        size="small"
+                                        onClick={advanceToNextActiveBlock}
+                                        sx={{ borderRadius: '8px', p: '2px 8px', minWidth: 'auto' }}
+                                    >
+                                        Skip
+                                    </Button>
+                                </Box>
+                            ) : (
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: block.originatingPlannedSet ? 'warning.main' : 'info.main', ml: 1 }}>
+                                    {block.duration}s
+                                </Typography>
+                            )}
                         </Box>
                       )}
                     </Paper>
