@@ -176,6 +176,7 @@ const App = () => {
   const [userId, setUserId] = useState(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [currentTab, setCurrentTab] = useState('sets');
+  const [isFinishConfirmDialogOpen, setIsFinishConfirmDialogOpen] = useState(false);
 
   // --- Snackbar State and Function (Now only defined once) ---
   const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -664,7 +665,7 @@ const App = () => {
             <IconButton onClick={handlePauseResume} size="small" color="inherit">
               {isTimerRunning ? <PauseIcon /> : <PlayArrowIcon />}
             </IconButton>
-            <IconButton onClick={handleStopWorkout} size="small" color="inherit">
+            <IconButton onClick={() => setIsFinishConfirmDialogOpen(true)} size="small" color="inherit">
               <CheckIcon />
             </IconButton>
             <IconButton onClick={handleStopWorkout} size="small" color="inherit">
@@ -718,7 +719,7 @@ const App = () => {
               </Typography>
             ) : filteredWorkouts.length === 0 && (!userId || plannedWorkouts.length === 0) ? (
               <Typography variant="body1" color="textSecondary" sx={{ textAlign: 'center', mt: 2 }}>
-                {userId ? 'No workouts planned yet. Click the \'+\' button to get started!' : 'Sign in to view and save your planned workouts.'}
+                {userId ? "No workouts planned yet. Click the '+' button to get started!" : 'Sign in to view and save your planned workouts.'}
               </Typography>
             ) : (
               <TableContainer>
@@ -917,6 +918,21 @@ const App = () => {
               sx={{ borderRadius: 1 }}
             >
               {editingWorkoutId ? 'Save Changes' : 'Plan Set'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog open={isFinishConfirmDialogOpen} onClose={() => setIsFinishConfirmDialogOpen(false)}>
+          <DialogTitle>Finish Workout</DialogTitle>
+          <DialogContent>
+            <Typography>Are you sure you want to finish this workout?</Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setIsFinishConfirmDialogOpen(false)} color="secondary">
+              Cancel
+            </Button>
+            <Button onClick={() => { handleStopWorkout(); setIsFinishConfirmDialogOpen(false); }} color="primary">
+              Finish
             </Button>
           </DialogActions>
         </Dialog>
