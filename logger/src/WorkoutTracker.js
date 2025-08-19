@@ -381,7 +381,6 @@ const WorkoutTracker = ({
       return;
     }
 
-    // Filter for completed sets and format them for session history
     const completedSets = playbackBlocks
       .filter(block => block.type === 'plannedSetInstance' && block.status === 'completed')
       .map(block => ({
@@ -401,13 +400,15 @@ const WorkoutTracker = ({
         };
 
         await addDoc(collection(db, `artifacts/${appId}/users/${userId}/sessionHistory`), sessionData);
-        showSnackbar('Workout session saved to history!', 'success');
+        showSnackbar(`Workout session with ${completedSets.length} completed sets saved to history!`, 'success');
       } catch (error) {
         console.error('Error saving session history to Firestore:', error);
         showSnackbar(`Failed to save session history: ${error.message}`, 'error');
       }
     } else {
-        showSnackbar('No completed sets to save.', 'info');
+        const totalSets = playbackBlocks.filter(b => b.type === 'plannedSetInstance').length;
+        const completedCount = playbackBlocks.filter(b => b.type === 'plannedSetInstance' && b.status === 'completed').length;
+        showSnackbar(`No completed sets to save. Total sets in workout: ${totalSets}, sets marked as complete: ${completedCount}.`, 'warning');
     }
 
     // Finally, call the original stop workout function
