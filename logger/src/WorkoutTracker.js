@@ -382,7 +382,6 @@ const WorkoutTracker = ({
   // Function to save edited block data to Firestore
   const saveEditedBlock = async (index) => {
     if (activeWorkoutSession && userId) {
-      const blockToSave = playbackBlocks[index];
       const updatedPlaybackBlocks = playbackBlocks.map((block, i) => {
         if (i === index) {
           return { ...block, isEditing: false }; // Exit edit mode after saving
