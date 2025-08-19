@@ -473,17 +473,21 @@ const WorkoutTracker = ({
                                   Weight
                                 </Typography>
                                 {block.isEditing ? (
-                                    <Box sx={{ height: '40px', display: 'flex', alignItems: 'center' }}>
-                                        <TextField
-                                            type="number"
-                                            value={block.weight}
-                                            onChange={(e) => handleValueChange(index, 'weight', parseFloat(e.target.value))}
-                                            onBlur={() => saveEditedBlock(index)}
-                                            onKeyPress={(e) => { if (e.key === 'Enter') saveEditedBlock(index); }}
-                                            size="small"
-                                            sx={{ width: '60px' }}
-                                        />
-                                    </Box>
+                                    <TextField
+                                        type="number"
+                                        value={block.weight}
+                                        onChange={(e) => handleValueChange(index, 'weight', parseFloat(e.target.value))}
+                                        onBlur={() => saveEditedBlock(index)}
+                                        onKeyPress={(e) => { if (e.key === 'Enter') saveEditedBlock(index); }}
+                                        size="small"
+                                        sx={{
+                                            width: '60px',
+                                            '& .MuiOutlinedInput-root': {
+                                                borderRadius: '4px',
+                                                height: '40px',
+                                            },
+                                        }}
+                                    />
                                 ) : (
                                     <Box
                                         onClick={() => {if(block.status === 'active') toggleEditMode(index)}}
@@ -509,17 +513,21 @@ const WorkoutTracker = ({
                                   Reps
                                 </Typography>
                                 {block.isEditing ? (
-                                    <Box sx={{ height: '40px', display: 'flex', alignItems: 'center' }}>
-                                        <TextField
-                                            type="number"
-                                            value={block.reps}
-                                            onChange={(e) => handleValueChange(index, 'reps', parseInt(e.target.value))}
-                                            onBlur={() => saveEditedBlock(index)}
-                                            onKeyPress={(e) => { if (e.key === 'Enter') saveEditedBlock(index); }}
-                                            size="small"
-                                            sx={{ width: '60px' }}
-                                        />
-                                    </Box>
+                                    <TextField
+                                        type="number"
+                                        value={block.reps}
+                                        onChange={(e) => handleValueChange(index, 'reps', parseInt(e.target.value))}
+                                        onBlur={() => saveEditedBlock(index)}
+                                        onKeyPress={(e) => { if (e.key === 'Enter') saveEditedBlock(index); }}
+                                        size="small"
+                                        sx={{
+                                            width: '60px',
+                                            '& .MuiOutlinedInput-root': {
+                                                borderRadius: '4px',
+                                                height: '40px',
+                                            },
+                                        }}
+                                    />
                                 ) : (
                                     <Box
                                         onClick={() => {if(block.status === 'active') toggleEditMode(index)}}
