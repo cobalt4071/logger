@@ -261,9 +261,9 @@ const App = () => {
       await setDoc(sessionDocRef.current, updateData, { merge: true });
     } else {
       showSnackbar('Workout Complete! Great job!', 'success');
-      await handleStopWorkout();
+      setIsFinishConfirmDialogOpen(true);
     }
-  }, [showSnackbar, handleStopWorkout]);
+  }, [showSnackbar, handleStopWorkout, setIsFinishConfirmDialogOpen]);
   
   // 1. Firebase Authentication Setup
   useEffect(() => {
