@@ -97,7 +97,7 @@ const WorkoutTracker = ({
   // and switch back to list view when it's stopped.
   useEffect(() => {
     if (activeWorkoutSession) {
-      setView('playback');
+      // setView('playback');
     } else {
       setView('list');
     }
