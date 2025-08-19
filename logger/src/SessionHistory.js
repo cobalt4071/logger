@@ -8,17 +8,52 @@ import {
   AccordionSummary,
   AccordionDetails,
   Divider,
+  TextField,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import DeleteIcon from '@mui/icons-material/Delete';
 import TimerIcon from '@mui/icons-material/Timer';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 
-const SessionHistory = ({ sessionHistory, formatDate, formatTime, deleteSessionHistoryEntry, userId }) => {
+const SessionHistory = ({ 
+  sessionHistory, 
+  formatDate, 
+  formatTime, 
+  deleteSessionHistoryEntry, 
+  userId, 
+  historySearchQuery, 
+  setHistorySearchQuery, 
+  startDate, 
+  setStartDate, 
+  endDate, 
+  setEndDate 
+}) => {
   return (
     <Paper elevation={3} sx={{ p: 3, borderRadius: 2, position: 'relative' }}>
       <Typography variant="h6" sx={{ color: 'text.primary', mb: 2 }}>
         Recent Workouts
       </Typography>
+      <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+        <TextField
+          label="Search by name"
+          variant="outlined"
+          fullWidth
+          value={historySearchQuery}
+          onChange={(e) => setHistorySearchQuery(e.target.value)}
+        />
+        <DatePicker
+          label="Start Date"
+          value={startDate}
+          onChange={(newValue) => setStartDate(newValue)}
+          renderInput={(params) => <TextField {...params} />}
+        />
+        <DatePicker
+          label="End Date"
+          value={endDate}
+          onChange={(newValue) => setEndDate(newValue)}
+          renderInput={(params) => <TextField {...params} />}
+        />
+      </Box>
       <Box sx={{ mb: 2, p: 1, borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
         {sessionHistory.length === 0 ? (
             <Typography variant="body2" color="textSecondary" sx={{ px: 2, py: 1 }}>

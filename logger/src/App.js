@@ -60,6 +60,9 @@ import {
   onAuthStateChanged,
 } from "firebase/auth";
 
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+
 // Import the new WorkoutTracker component
 import WorkoutTracker from './WorkoutTracker';
 import SessionHistory from './SessionHistory';
@@ -177,6 +180,9 @@ const App = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingWorkoutId, setEditingWorkoutId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [historySearchQuery, setHistorySearchQuery] = useState('');
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
   const [userId, setUserId] = useState(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [currentTab, setCurrentTab] = useState('sets');
@@ -634,6 +640,14 @@ const App = () => {
     workout.exercise.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const filteredSessionHistory = sessionHistory.filter(session => {
+    const sessionDate = new Date(session.date);
+    const matchesSearchQuery = session.name.toLowerCase().includes(historySearchQuery.toLowerCase());
+    const isAfterStartDate = !startDate || sessionDate >= startDate;
+    const isBeforeEndDate = !endDate || sessionDate <= endDate;
+    return matchesSearchQuery && isAfterStartDate && isBeforeEndDate;
+  });
+
   // Handle tab change
   const handleTabChange = (event, newValue) => {
     setCurrentTab(newValue);
@@ -746,422 +760,430 @@ const App = () => {
 
   return (
     <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
-      <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
+      <LocalizationProvider dateAdapter={AdapterDateFns}>
+        <CssBaseline />
+        <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
 
-      {activeWorkoutSession && (
-        <Box sx={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 1100,
-          bgcolor: '#4caf50', // Green color
-          color: 'white',
-          p: 1.5,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          boxShadow: '0px 2px 10px rgba(0, 0, 0, 0.3)',
-        }}>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <FitnessCenterIcon sx={{ mr: 1 }} />
-            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-              {activeWorkoutSession.name}
-            </Typography>
-            {elapsedSeconds > 0 && (
-              <Box sx={{ ml: 3, display: 'flex', alignItems: 'center' }}>
-                <WatchLaterIcon sx={{ mr: 1 }} />
-                <Typography variant="body1">{formatTime(elapsedSeconds)}</Typography>
-              </Box>
-            )}
-            {timerSecondsLeft > 0 && (
-              <Box sx={{ ml: 3, display: 'flex', alignItems: 'center' }}>
-                <TimerIcon sx={{ mr: 1 }} />
-                <Typography variant="body1">{timerSecondsLeft}s</Typography>
-              </Box>
-            )}
-          </Box>
-          <Box>
-            <IconButton onClick={handlePauseResume} size="small" color="inherit">
-              {isTimerRunning ? <PauseIcon /> : <PlayArrowIcon />}
-            </IconButton>
-            <IconButton onClick={() => setIsFinishConfirmDialogOpen(true)} size="small" color="inherit">
-              <CheckIcon />
-            </IconButton>
-            <IconButton onClick={handleStopWorkout} size="small" color="inherit">
-              <StopIcon />
-            </IconButton>
-          </Box>
-        </Box>
-      )}
-
-      <Container maxWidth="md" sx={{ mt: activeWorkoutSession ? 10 : 4 }}>
-        <Box sx={{ my: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        </Box>
-
-        {currentTab === 'sets' && (
-          <Paper elevation={3} sx={{ p: 3, borderRadius: 2, position: 'relative' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6" sx={{ color: 'text.primary' }}>
-                Planned Sets
+        {activeWorkoutSession && (
+          <Box sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            zIndex: 1100,
+            bgcolor: '#4caf50', // Green color
+            color: 'white',
+            p: 1.5,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            boxShadow: '0px 2px 10px rgba(0, 0, 0, 0.3)',
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <FitnessCenterIcon sx={{ mr: 1 }} />
+              <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                {activeWorkoutSession.name}
               </Typography>
-              <IconButton
-                color="primary"
-                onClick={() => handleOpenForm(null)}
-                aria-label="plan new set"
-                disabled={!userId}
-                sx={{
-                  borderRadius: '6px',
-                  backgroundColor: 'primary.main',
-                  padding: '6px',
-                  '&:hover': {
-                    backgroundColor: 'primary.dark',
-                  },
-                }}
-              >
-                <AddIcon fontSize="medium" sx={{ color: darkTheme.palette.background.paper }}/>
+              {elapsedSeconds > 0 && (
+                <Box sx={{ ml: 3, display: 'flex', alignItems: 'center' }}>
+                  <WatchLaterIcon sx={{ mr: 1 }} />
+                  <Typography variant="body1">{formatTime(elapsedSeconds)}</Typography>
+                </Box>
+              )}
+              {timerSecondsLeft > 0 && (
+                <Box sx={{ ml: 3, display: 'flex', alignItems: 'center' }}>
+                  <TimerIcon sx={{ mr: 1 }} />
+                  <Typography variant="body1">{timerSecondsLeft}s</Typography>
+                </Box>
+              )}
+            </Box>
+            <Box>
+              <IconButton onClick={handlePauseResume} size="small" color="inherit">
+                {isTimerRunning ? <PauseIcon /> : <PlayArrowIcon />}
+              </IconButton>
+              <IconButton onClick={() => setIsFinishConfirmDialogOpen(true)} size="small" color="inherit">
+                <CheckIcon />
+              </IconButton>
+              <IconButton onClick={handleStopWorkout} size="small" color="inherit">
+                <StopIcon />
               </IconButton>
             </Box>
+          </Box>
+        )}
 
-            <TextField
-              label="Search Set"
-              variant="outlined"
-              fullWidth
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              sx={{ mb: 3 }}
-              disabled={!userId}
-            />
+        <Container maxWidth="md" sx={{ mt: activeWorkoutSession ? 10 : 4 }}>
+          <Box sx={{ my: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          </Box>
 
-            {filteredWorkouts.length === 0 && plannedWorkouts.length > 0 && searchQuery !== '' ? (
-              <Typography variant="body1" color="textSecondary" sx={{ textAlign: 'center', mt: 2 }}>
-                No matching sets found for "{searchQuery}".
-              </Typography>
-            ) : filteredWorkouts.length === 0 && (!userId || plannedWorkouts.length === 0) ? (
-              <Typography variant="body1" color="textSecondary" sx={{ textAlign: 'center', mt: 2 }}>
-                {userId ? "No workouts planned yet. Click the '+' button to get started!" : 'Sign in to view and save your planned workouts.'}
-              </Typography>
-            ) : (
-              <TableContainer>
-                <Table aria-label="planned workout table">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Exercise</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>Sets</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>Reps</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>Weight (kg)</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>Rest (s)</TableCell>
-                      <TableCell align="center" sx={{ fontWeight: 'bold' }}>Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {filteredWorkouts.map((row) => (
-                      <TableRow key={row.id}>
-                        <TableCell component="th" scope="row">
-                          {row.exercise}
-                        </TableCell>
-                        <TableCell align="right">{row.sets}</TableCell>
-                        <TableCell align="right">{row.reps}</TableCell>
-                        <TableCell align="right">{row.weight}</TableCell>
-                        <TableCell align="right">{row.restTime}</TableCell>
-                        <TableCell align="center">
-                          <IconButton
-                            aria-label="edit"
-                            color="primary"
-                            onClick={() => handleOpenForm(row)}
-                            size="small"
-                            disabled={!userId}
-                            sx={{ mr: 1 }}
-                          >
-                            <EditIcon />
-                          </IconButton>
-                          <IconButton
-                            aria-label="delete"
-                            color="error"
-                            onClick={() => deletePlannedWorkout(row.id)}
-                            size="small"
-                            disabled={!userId}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </TableCell>
+          {currentTab === 'sets' && (
+            <Paper elevation={3} sx={{ p: 3, borderRadius: 2, position: 'relative' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6" sx={{ color: 'text.primary' }}>
+                  Planned Sets
+                </Typography>
+                <IconButton
+                  color="primary"
+                  onClick={() => handleOpenForm(null)}
+                  aria-label="plan new set"
+                  disabled={!userId}
+                  sx={{
+                    borderRadius: '6px',
+                    backgroundColor: 'primary.main',
+                    padding: '6px',
+                    '&:hover': {
+                      backgroundColor: 'primary.dark',
+                    },
+                  }}
+                >
+                  <AddIcon fontSize="medium" sx={{ color: darkTheme.palette.background.paper }}/>
+                </IconButton>
+              </Box>
+
+              <TextField
+                label="Search Set"
+                variant="outlined"
+                fullWidth
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                sx={{ mb: 3 }}
+                disabled={!userId}
+              />
+
+              {filteredWorkouts.length === 0 && plannedWorkouts.length > 0 && searchQuery !== '' ? (
+                <Typography variant="body1" color="textSecondary" sx={{ textAlign: 'center', mt: 2 }}>
+                  No matching sets found for "{searchQuery}".
+                </Typography>
+              ) : filteredWorkouts.length === 0 && (!userId || plannedWorkouts.length === 0) ? (
+                <Typography variant="body1" color="textSecondary" sx={{ textAlign: 'center', mt: 2 }}>
+                  {userId ? "No workouts planned yet. Click the '+' button to get started!" : 'Sign in to view and save your planned workouts.'}
+                </Typography>
+              ) : (
+                <TableContainer>
+                  <Table aria-label="planned workout table">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Exercise</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>Sets</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>Reps</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>Weight (kg)</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>Rest (s)</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 'bold' }}>Actions</TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            )}
-          </Paper>
-        )}
+                    </TableHead>
+                    <TableBody>
+                      {filteredWorkouts.map((row) => (
+                        <TableRow key={row.id}>
+                          <TableCell component="th" scope="row">
+                            {row.exercise}
+                          </TableCell>
+                          <TableCell align="right">{row.sets}</TableCell>
+                          <TableCell align="right">{row.reps}</TableCell>
+                          <TableCell align="right">{row.weight}</TableCell>
+                          <TableCell align="right">{row.restTime}</TableCell>
+                          <TableCell align="center">
+                            <IconButton
+                              aria-label="edit"
+                              color="primary"
+                              onClick={() => handleOpenForm(row)}
+                              size="small"
+                              disabled={!userId}
+                              sx={{ mr: 1 }}
+                            >
+                              <EditIcon />
+                            </IconButton>
+                            <IconButton
+                              aria-label="delete"
+                              color="error"
+                              onClick={() => deletePlannedWorkout(row.id)}
+                              size="small"
+                              disabled={!userId}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </Paper>
+          )}
 
-        {currentTab === 'workout' && (
-          <WorkoutTracker
-            userId={userId}
-            appId={appId}
-            db={db}
-            plannedWorkouts={plannedWorkouts}
-            showSnackbar={showSnackbar}
-            activeWorkoutSession={activeWorkoutSession}
-            playbackBlocks={playbackBlocks}
-            timerSecondsLeft={timerSecondsLeft}
-            initialRestDuration={initialRestDuration}
-            isTimerRunning={isTimerRunning}
-            handleStartWorkoutSession={handleStartWorkoutSession}
-            handleBlockCompletion={handleBlockCompletion}
-            handlePauseResume={handlePauseResume}
-            handleStopWorkout={handleStopWorkout}
-            advanceToNextActiveBlock={advanceToNextActiveBlock}
-            setActiveWorkoutSession={setActiveWorkoutSession}
-            setPlaybackBlocks={setPlaybackBlocks}
-            setIsTimerRunning={setIsTimerRunning}
-            setTimerSecondsLeft={setTimerSecondsLeft}
-            setInitialRestDuration={setInitialRestDuration}
-          />
-        )}
+          {currentTab === 'workout' && (
+            <WorkoutTracker
+              userId={userId}
+              appId={appId}
+              db={db}
+              plannedWorkouts={plannedWorkouts}
+              showSnackbar={showSnackbar}
+              activeWorkoutSession={activeWorkoutSession}
+              playbackBlocks={playbackBlocks}
+              timerSecondsLeft={timerSecondsLeft}
+              initialRestDuration={initialRestDuration}
+              isTimerRunning={isTimerRunning}
+              handleStartWorkoutSession={handleStartWorkoutSession}
+              handleBlockCompletion={handleBlockCompletion}
+              handlePauseResume={handlePauseResume}
+              handleStopWorkout={handleStopWorkout}
+              advanceToNextActiveBlock={advanceToNextActiveBlock}
+              setActiveWorkoutSession={setActiveWorkoutSession}
+              setPlaybackBlocks={setPlaybackBlocks}
+              setIsTimerRunning={setIsTimerRunning}
+              setTimerSecondsLeft={setTimerSecondsLeft}
+              setInitialRestDuration={setInitialRestDuration}
+            />
+          )}
 
-        {currentTab === 'history' && (
-          <SessionHistory
-            sessionHistory={sessionHistory}
-            formatDate={formatDate}
-            formatTime={formatTime}
-            deleteSessionHistoryEntry={deleteSessionHistoryEntry}
-            userId={userId}
-          />
-        )}
+          {currentTab === 'history' && (
+            <SessionHistory
+              sessionHistory={filteredSessionHistory}
+              formatDate={formatDate}
+              formatTime={formatTime}
+              deleteSessionHistoryEntry={deleteSessionHistoryEntry}
+              userId={userId}
+              historySearchQuery={historySearchQuery}
+              setHistorySearchQuery={setHistorySearchQuery}
+              startDate={startDate}
+              setStartDate={setStartDate}
+              endDate={endDate}
+              setEndDate={setEndDate}
+            />
+          )}
 
-        {currentTab === 'settings' && (
-          <Paper elevation={3} sx={{ p: 3, borderRadius: 2, textAlign: 'center' }}>
-            <SettingsIcon sx={{ fontSize: 60, color: 'secondary.main', mb: 2 }} />
-            <Typography variant="h6" sx={{ color: 'text.primary', mb: 1 }}>
-              Settings
-            </Typography>
-            <Typography variant="body1" color="textSecondary" sx={{ mb: 3 }}>
-              Manage app preferences and user profile here.
-            </Typography>
-            {!userId ? (
-                <Box sx={{ mb: 3, textAlign: 'center' }}>
-                    <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-                        Sign in with Google to save your workout plans and access all features.
-                    </Typography>
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={handleGoogleSignIn}
-                        sx={{ borderRadius: '8px', px: 4, py: 1.5 }}
-                    >
-                        Sign In with Google
-                    </Button>
-                </Box>
-            ) : (
-                <Box sx={{ mb: 3, textAlign: 'center' }}>
-                    <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-                        You are signed in. User ID: <strong>{userId}</strong>
-                    </Typography>
-                    <Button
-                        variant="outlined"
-                        color="secondary"
-                        onClick={handleSignOut}
-                        sx={{ borderRadius: '8px', px: 4, py: 1.5 }}
-                    >
-                        Sign Out
-                    </Button>
-                </Box>
-            )}
-          </Paper>
-        )}
+          {currentTab === 'settings' && (
+            <Paper elevation={3} sx={{ p: 3, borderRadius: 2, textAlign: 'center' }}>
+              <SettingsIcon sx={{ fontSize: 60, color: 'secondary.main', mb: 2 }} />
+              <Typography variant="h6" sx={{ color: 'text.primary', mb: 1 }}>
+                Settings
+              </Typography>
+              <Typography variant="body1" color="textSecondary" sx={{ mb: 3 }}>
+                Manage app preferences and user profile here.
+              </Typography>
+              {!userId ? (
+                  <Box sx={{ mb: 3, textAlign: 'center' }}>
+                      <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                          Sign in with Google to save your workout plans and access all features.
+                      </Typography>
+                      <Button
+                          variant="contained"
+                          color="primary"
+                          onClick={handleGoogleSignIn}
+                          sx={{ borderRadius: '8px', px: 4, py: 1.5 }}
+                      >
+                          Sign In with Google
+                      </Button>
+                  </Box>
+              ) : (
+                  <Box sx={{ mb: 3, textAlign: 'center' }}>
+                      <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                          You are signed in. User ID: <strong>{userId}</strong>
+                      </Typography>
+                      <Button
+                          variant="outlined"
+                          color="secondary"
+                          onClick={handleSignOut}
+                          sx={{ borderRadius: '8px', px: 4, py: 1.5 }}
+                      >
+                          Sign Out
+                      </Button>
+                  </Box>
+              )}
+            </Paper>
+          )}
 
-        <Dialog open={isFormOpen} onClose={handleCloseForm} maxWidth="xs" fullWidth>
-          <DialogTitle sx={{ textAlign: 'center', pb: 1, color: 'primary.main' }}>
-            {editingWorkoutId ? 'Edit Workout Set' : 'Plan New Workout Set'}
-          </DialogTitle>
-          <DialogContent>
-            <Box
-              component="form"
+          <Dialog open={isFormOpen} onClose={handleCloseForm} maxWidth="xs" fullWidth>
+            <DialogTitle sx={{ textAlign: 'center', pb: 1, color: 'primary.main' }}>
+              {editingWorkoutId ? 'Edit Workout Set' : 'Plan New Workout Set'}
+            </DialogTitle>
+            <DialogContent>
+              <Box
+                component="form"
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 2,
+                  mt: 1,
+                }}
+                noValidate
+                autoComplete="off"
+              >
+                <TextField
+                  label="Exercise Name"
+                  variant="outlined"
+                  value={exercise}
+                  onChange={(e) => setExercise(e.target.value)}
+                  fullWidth
+                  autoFocus
+                />
+                <TextField
+                  label="Sets"
+                  variant="outlined"
+                  type="number"
+                  value={sets}
+                  onChange={(e) => setSets(e.target.value)}
+                  inputProps={{ min: 1 }}
+                  fullWidth
+                />
+                <TextField
+                  label="Reps"
+                  variant="outlined"
+                  type="number"
+                  value={reps}
+                  onChange={(e) => setReps(e.target.value)}
+                  inputProps={{ min: 1 }}
+                  fullWidth
+                />
+                <TextField
+                  label="Weight (kg)"
+                  variant="outlined"
+                  type="number"
+                  value={weight}
+                  onChange={(e) => setWeight(e.target.value)}
+                  inputProps={{ min: 0, step: 0.5 }}
+                  fullWidth
+                />
+                <TextField
+                  label="Rest Time (seconds)"
+                  variant="outlined"
+                  type="number"
+                  value={restTime}
+                  onChange={(e) => setRestTime(e.target.value)}
+                  inputProps={{ min: 0 }}
+                  fullWidth
+                />
+              </Box>
+            </DialogContent>
+            <DialogActions sx={{ justifyContent: 'space-between', px: 3, pb: 2 }}>
+              <Button
+                variant="outlined"
+                color="secondary"
+                onClick={handleCloseForm}
+                sx={{ borderRadius: 1 }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleSaveWorkout}
+                sx={{ borderRadius: 1 }}
+              >
+                {editingWorkoutId ? 'Save Changes' : 'Plan Set'}
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          <Dialog open={isFinishConfirmDialogOpen} onClose={() => setIsFinishConfirmDialogOpen(false)}>
+            <DialogTitle>Finish Workout</DialogTitle>
+            <DialogContent>
+              <Typography>Are you sure you want to finish this workout?</Typography>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setIsFinishConfirmDialogOpen(false)} color="secondary">
+                Cancel
+              </Button>
+              <Button onClick={handleFinishWorkoutAndSave} color="primary">
+                Finish
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          <Snackbar open={snackbarOpen} autoHideDuration={3000} onClose={handleCloseSnackbar}>
+            <Alert onClose={handleCloseSnackbar} severity={snackbarSeverity} sx={{ width: '100%' }}>
+              {snackbarMessage}
+            </Alert>
+          </Snackbar>
+        </Container>
+
+        <Paper sx={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 1000,
+          borderRadius: '12px 12px 0 0',
+          bgcolor: 'background.paper',
+          py: 1,
+          boxShadow: '0px -2px 10px rgba(0, 0, 0, 0.3)',
+        }} elevation={5}>
+          <Tabs
+            value={currentTab}
+            onChange={handleTabChange}
+            indicatorColor="primary"
+            textColor="primary"
+            centered
+            sx={{
+              minHeight: '60px',
+              '& .MuiTabs-indicator': {
+                height: '4px',
+                borderRadius: '2px',
+              },
+            }}
+          >
+            <Tab
+              label="Workouts"
+              value="workout"
+              icon={<FitnessCenterIcon />}
               sx={{
-                display: 'flex',
                 flexDirection: 'column',
-                gap: 2,
-                mt: 1,
+                fontSize: '0.75rem',
+                minWidth: 'auto',
+                px: 2,
+                color: currentTab === 'workout' ? darkTheme.palette.primary.main : darkTheme.palette.text.secondary,
+                '&.Mui-selected': {
+                  color: darkTheme.palette.primary.main,
+                },
               }}
-              noValidate
-              autoComplete="off"
-            >
-              <TextField
-                label="Exercise Name"
-                variant="outlined"
-                value={exercise}
-                onChange={(e) => setExercise(e.target.value)}
-                fullWidth
-                autoFocus
-              />
-              <TextField
-                label="Sets"
-                variant="outlined"
-                type="number"
-                value={sets}
-                onChange={(e) => setSets(e.target.value)}
-                inputProps={{ min: 1 }}
-                fullWidth
-              />
-              <TextField
-                label="Reps"
-                variant="outlined"
-                type="number"
-                value={reps}
-                onChange={(e) => setReps(e.target.value)}
-                inputProps={{ min: 1 }}
-                fullWidth
-              />
-              <TextField
-                label="Weight (kg)"
-                variant="outlined"
-                type="number"
-                value={weight}
-                onChange={(e) => setWeight(e.target.value)}
-                inputProps={{ min: 0, step: 0.5 }}
-                fullWidth
-              />
-              <TextField
-                label="Rest Time (seconds)"
-                variant="outlined"
-                type="number"
-                value={restTime}
-                onChange={(e) => setRestTime(e.target.value)}
-                inputProps={{ min: 0 }}
-                fullWidth
-              />
-            </Box>
-          </DialogContent>
-          <DialogActions sx={{ justifyContent: 'space-between', px: 3, pb: 2 }}>
-            <Button
-              variant="outlined"
-              color="secondary"
-              onClick={handleCloseForm}
-              sx={{ borderRadius: 1 }}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleSaveWorkout}
-              sx={{ borderRadius: 1 }}
-            >
-              {editingWorkoutId ? 'Save Changes' : 'Plan Set'}
-            </Button>
-          </DialogActions>
-        </Dialog>
-
-        <Dialog open={isFinishConfirmDialogOpen} onClose={() => setIsFinishConfirmDialogOpen(false)}>
-          <DialogTitle>Finish Workout</DialogTitle>
-          <DialogContent>
-            <Typography>Are you sure you want to finish this workout?</Typography>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setIsFinishConfirmDialogOpen(false)} color="secondary">
-              Cancel
-            </Button>
-            <Button onClick={handleFinishWorkoutAndSave} color="primary">
-              Finish
-            </Button>
-          </DialogActions>
-        </Dialog>
-
-        <Snackbar open={snackbarOpen} autoHideDuration={3000} onClose={handleCloseSnackbar}>
-          <Alert onClose={handleCloseSnackbar} severity={snackbarSeverity} sx={{ width: '100%' }}>
-            {snackbarMessage}
-          </Alert>
-        </Snackbar>
-      </Container>
-
-      <Paper sx={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        zIndex: 1000,
-        borderRadius: '12px 12px 0 0',
-        bgcolor: 'background.paper',
-        py: 1,
-        boxShadow: '0px -2px 10px rgba(0, 0, 0, 0.3)',
-      }} elevation={5}>
-        <Tabs
-          value={currentTab}
-          onChange={handleTabChange}
-          indicatorColor="primary"
-          textColor="primary"
-          centered
-          sx={{
-            minHeight: '60px',
-            '& .MuiTabs-indicator': {
-              height: '4px',
-              borderRadius: '2px',
-            },
-          }}
-        >
-          <Tab
-            label="Workouts"
-            value="workout"
-            icon={<FitnessCenterIcon />}
-            sx={{
-              flexDirection: 'column',
-              fontSize: '0.75rem',
-              minWidth: 'auto',
-              px: 2,
-              color: currentTab === 'workout' ? darkTheme.palette.primary.main : darkTheme.palette.text.secondary,
-              '&.Mui-selected': {
-                color: darkTheme.palette.primary.main,
-              },
-            }}
-          />
-          <Tab
-            label="Sets"
-            value="sets"
-            icon={<AddIcon />}
-            sx={{
-              flexDirection: 'column',
-              fontSize: '0.75rem',
-              minWidth: 'auto',
-              px: 2,
-              color: currentTab === 'sets' ? darkTheme.palette.primary.main : darkTheme.palette.text.secondary,
-              '&.Mui-selected': {
-                color: darkTheme.palette.primary.main,
-              },
-            }}
-          />
-          <Tab
-            label="History"
-            value="history"
-            icon={<HistoryIcon />}
-            sx={{
-              flexDirection: 'column',
-              fontSize: '0.75rem',
-              minWidth: 'auto',
-              px: 2,
-              color: currentTab === 'history' ? darkTheme.palette.primary.main : darkTheme.palette.text.secondary,
-              '&.Mui-selected': {
-                color: darkTheme.palette.primary.main,
-              },
-            }}
-          />
-          <Tab
-            label="Settings"
-            value="settings"
-            icon={<SettingsIcon />}
-            sx={{
-              flexDirection: 'column',
-              fontSize: '0.75rem',
-              minWidth: 'auto',
-              px: 2,
-              color: currentTab === 'settings' ? darkTheme.palette.primary.main : darkTheme.palette.text.secondary,
-              '&.Mui-selected': {
-                color: darkTheme.palette.primary.main,
-              },
-            }}
-          />
-        </Tabs>
-      </Paper>
+            />
+            <Tab
+              label="Sets"
+              value="sets"
+              icon={<AddIcon />}
+              sx={{
+                flexDirection: 'column',
+                fontSize: '0.75rem',
+                minWidth: 'auto',
+                px: 2,
+                color: currentTab === 'sets' ? darkTheme.palette.primary.main : darkTheme.palette.text.secondary,
+                '&.Mui-selected': {
+                  color: darkTheme.palette.primary.main,
+                },
+              }}
+            />
+            <Tab
+              label="History"
+              value="history"
+              icon={<HistoryIcon />}
+              sx={{
+                flexDirection: 'column',
+                fontSize: '0.75rem',
+                minWidth: 'auto',
+                px: 2,
+                color: currentTab === 'history' ? darkTheme.palette.primary.main : darkTheme.palette.text.secondary,
+                '&.Mui-selected': {
+                  color: darkTheme.palette.primary.main,
+                },
+              }}
+            />
+            <Tab
+              label="Settings"
+              value="settings"
+              icon={<SettingsIcon />}
+              sx={{
+                flexDirection: 'column',
+                fontSize: '0.75rem',
+                minWidth: 'auto',
+                px: 2,
+                color: currentTab === 'settings' ? darkTheme.palette.primary.main : darkTheme.palette.text.secondary,
+                '&.Mui-selected': {
+                  color: darkTheme.palette.primary.main,
+                },
+              }}
+            />
+          </Tabs>
+        </Paper>
+      </LocalizationProvider>
     </ThemeProvider>
   );
 };
