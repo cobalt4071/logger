@@ -540,10 +540,8 @@ const WorkoutTracker = ({
                                 )}
                               </Box>
                           </Box>
-                          {block.status === 'active' && !block.isEditing && (
-                            <IconButton onClick={() => toggleEditMode(index)} size="small" sx={{ ml: 1, visibility: 'hidden' }}>
-                                <EditIcon />
-                            </IconButton>
+                          {block.status === 'active' && (
+                            <Box sx={{ width: 40, ml: 1 }} />
                           )}
                           <FormControlLabel
                             control={
