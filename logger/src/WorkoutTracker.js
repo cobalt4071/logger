@@ -540,9 +540,7 @@ const WorkoutTracker = ({
                                 )}
                               </Box>
                           </Box>
-                          {block.status === 'active' && (
-                            <Box sx={{ width: 40, ml: 1 }} />
-                          )}
+                          <Box sx={{ width: 40, ml: 1 }} />
                           <FormControlLabel
                             control={
                               <Checkbox
