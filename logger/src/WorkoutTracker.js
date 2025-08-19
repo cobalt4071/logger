@@ -486,10 +486,26 @@ const WorkoutTracker = ({
                                         onBlur={() => saveEditedBlock(index)}
                                         onKeyPress={(e) => { if (e.key === 'Enter') saveEditedBlock(index); }}
                                         size="small"
-                                        sx={{ width: '60px' }}
+                                        sx={{ width: '60px', height: '40px' }}
+                                        autoFocus
                                     />
                                 ) : (
-                                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', cursor: 'pointer' }} onClick={() => {if(block.status === 'active') toggleEditMode(index)}}>{block.weight}</Typography>
+                                    <Box
+                                        onClick={() => {if(block.status === 'active') toggleEditMode(index)}}
+                                        sx={{
+                                            width: '60px',
+                                            height: '40px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            border: '1px solid',
+                                            borderColor: block.status === 'active' ? 'grey.500' : 'transparent',
+                                            borderRadius: '4px',
+                                            cursor: block.status === 'active' ? 'pointer' : 'default',
+                                        }}
+                                    >
+                                        <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>{block.weight}</Typography>
+                                    </Box>
                                 )}
                               </Box>
                               <Divider orientation="vertical" flexItem sx={{ mx: 1 }}/>
@@ -505,10 +521,26 @@ const WorkoutTracker = ({
                                         onBlur={() => saveEditedBlock(index)}
                                         onKeyPress={(e) => { if (e.key === 'Enter') saveEditedBlock(index); }}
                                         size="small"
-                                        sx={{ width: '60px' }}
+                                        sx={{ width: '60px', height: '40px' }}
+                                        autoFocus
                                     />
                                 ) : (
-                                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', cursor: 'pointer' }} onClick={() => {if(block.status === 'active') toggleEditMode(index)}}>{block.reps}</Typography>
+                                    <Box
+                                        onClick={() => {if(block.status === 'active') toggleEditMode(index)}}
+                                        sx={{
+                                            width: '60px',
+                                            height: '40px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            border: '1px solid',
+                                            borderColor: block.status === 'active' ? 'grey.500' : 'transparent',
+                                            borderRadius: '4px',
+                                            cursor: block.status === 'active' ? 'pointer' : 'default',
+                                        }}
+                                    >
+                                        <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>{block.reps}</Typography>
+                                    </Box>
                                 )}
                               </Box>
                           </Box>
