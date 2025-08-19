@@ -42,13 +42,13 @@ const SessionHistory = ({
           onChange={(e) => setHistorySearchQuery(e.target.value)}
         />
         <DatePicker
-          label="Start Date"
+          label="Start"
           value={startDate}
           onChange={(newValue) => setStartDate(newValue)}
           renderInput={(params) => <TextField {...params} />}
         />
         <DatePicker
-          label="End Date"
+          label="End"
           value={endDate}
           onChange={(newValue) => setEndDate(newValue)}
           renderInput={(params) => <TextField {...params} />}
