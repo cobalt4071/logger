@@ -1137,13 +1137,15 @@ const WorkoutTracker = ({
                         </AccordionSummary>
                         <AccordionDetails sx={{ pt: 0 }}>
                             <Divider sx={{ my: 1, borderColor: 'rgba(255,255,255,0.1)' }} />
-                            {session.blocks.map((block, blockIndex) => (
+                            {session.blocks && session.blocks.map((block, blockIndex) => (
                                 <Typography key={blockIndex} variant="body2" color="textSecondary" sx={{ ml: 1, my: 0.5 }}>
-                                    - {block.type === 'plannedSetInstance' // Assuming the history block type is plannedSetInstance
+                                    - {block.exercise 
                                         ? `${block.exercise}: ${block.reps} reps @ ${block.weight}kg`
-                                        : block.type === 'rest'
-                                        ? `Rest: ${block.duration}s`
-                                        : `Note: "${block.text}"`
+                                        : block.type === 'rest' 
+                                        ? `Rest: ${block.duration}s` 
+                                        : block.type === 'note' 
+                                        ? `Note: "${block.text}"`
+                                        : 'Completed Set'
                                     }
                                 </Typography>
                             ))}
