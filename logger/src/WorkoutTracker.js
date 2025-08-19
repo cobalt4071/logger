@@ -376,6 +376,8 @@ const WorkoutTracker = ({
   // --- End Drag and Drop Handlers ---
 
   const handleFinishWorkout = async () => {
+    window.alert('handleFinishWorkout called!'); // For debugging
+
     if (!userId || !activeWorkoutSession) {
       showSnackbar('No active workout to finish or user not signed in.', 'warning');
       return;
