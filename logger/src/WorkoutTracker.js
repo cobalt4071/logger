@@ -92,6 +92,18 @@ const WorkoutTracker = ({
     });
   };
 
+  // Helper function to format seconds into MM:SS
+  const formatTime = (totalSeconds) => {
+    if (typeof totalSeconds !== 'number' || totalSeconds < 0) {
+        return '00:00';
+    }
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    const formattedMinutes = String(minutes).padStart(2, '0');
+    const formattedSeconds = String(seconds).padStart(2, '0');
+    return `${formattedMinutes}:${formattedSeconds}`;
+  };
+
   // Effect to switch to playback view when a workout becomes active,
   // and switch back to list view when it's stopped.
   useEffect(() => {
@@ -1066,12 +1078,20 @@ const WorkoutTracker = ({
                                 },
                             }}
                         >
-                            <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
                                 <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                                     {session.name}
                                 </Typography>
-                                <Typography variant="body2" color="textSecondary" sx={{ ml: 1 }}>
+                                <Typography variant="body2" color="textSecondary">
                                     {formatDate(session.date)}
+                                </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                <Typography variant="body2" color="textSecondary">
+                                    Duration: {formatTime(session.duration)}
+                                </Typography>
+                                <Typography variant="body2" color="textSecondary">
+                                    Sets: {session.completedSets}
                                 </Typography>
                             </Box>
                         </AccordionSummary>

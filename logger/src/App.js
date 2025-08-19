@@ -226,6 +226,10 @@ const App = () => {
       return;
     }
 
+    const workoutDuration = activeSessionStartTime ? Math.floor((Date.now() - activeSessionStartTime) / 1000) : 0;
+    const completedSets = playbackBlocks.filter(block => block.type === 'plannedSetInstance' && block.status === 'completed');
+    const completedSetsCount = completedSets.length;
+
     const completedBlocks = playbackBlocks
       .filter(block => block.status === 'completed')
       .map(block => {
@@ -260,6 +264,8 @@ const App = () => {
           date: new Date().toISOString(),
           userId: userId,
           blocks: completedBlocks,
+          duration: workoutDuration,
+          completedSets: completedSetsCount,
         };
 
         await addDoc(collection(db, `artifacts/${appId}/users/${userId}/sessionHistory`), sessionData);
