@@ -468,7 +468,7 @@ const WorkoutTracker = ({
                                 </Typography>
                               </Box>
                               <Divider orientation="vertical" flexItem sx={{ mx: 1 }}/>
-                              <Box sx={{ textAlign: 'center', flexGrow: 1 }}>
+                              <Box sx={{ textAlign: 'center', flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                                 <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textTransform: 'uppercase', fontSize: '0.6rem' }}>
                                   Weight
                                 </Typography>
@@ -502,7 +502,7 @@ const WorkoutTracker = ({
                                 )}
                               </Box>
                               <Divider orientation="vertical" flexItem sx={{ mx: 1 }}/>
-                              <Box sx={{ textAlign: 'center', flexGrow: 1 }}>
+                              <Box sx={{ textAlign: 'center', flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                                 <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textTransform: 'uppercase', fontSize: '0.6rem' }}>
                                   Reps
                                 </Typography>
