@@ -50,7 +50,6 @@ const WorkoutTracker = ({
   handleStartWorkoutSession, handleBlockCompletion, handlePauseResume, handleStopWorkout,
   advanceToNextActiveBlock,
   setActiveWorkoutSession, setPlaybackBlocks, setIsTimerRunning, setTimerSecondsLeft, setInitialRestDuration,
-  deleteSessionHistoryEntry,
 }) => {
   // State for the current workout being constructed or edited
   const [currentWorkoutName, setCurrentWorkoutName] = useState('');
@@ -77,7 +76,6 @@ const WorkoutTracker = ({
 
   // State to store created workouts (fetched from Firestore)
   const [createdWorkouts, setCreatedWorkouts] = useState([]);
-  const [sessionHistory, setSessionHistory] = useState([]);
 
   // Add missing refs
   const activeBlockRef = useRef(null);
@@ -91,18 +89,6 @@ const WorkoutTracker = ({
       hour: '2-digit',
       minute: '2-digit'
     });
-  };
-
-  // Helper function to format seconds into MM:SS
-  const formatTime = (totalSeconds) => {
-    if (typeof totalSeconds !== 'number' || totalSeconds < 0) {
-        return '00:00';
-    }
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    const formattedMinutes = String(minutes).padStart(2, '0');
-    const formattedSeconds = String(seconds).padStart(2, '0');
-    return `${formattedMinutes}:${formattedSeconds}`;
   };
 
   // Effect to switch to playback view when a workout becomes active,
@@ -140,29 +126,6 @@ const WorkoutTracker = ({
       setCreatedWorkouts([]); // Clear created workouts if no user
     }
   }, [userId, appId, db, showSnackbar]); // Added showSnackbar to dependencies
-
-  // Effect to load session history from Firestore
-  useEffect(() => {
-    if (userId) {
-      const sessionHistoryRef = collection(db, `artifacts/${appId}/users/${userId}/sessionHistory`);
-      const q = query(sessionHistoryRef, orderBy('date', 'desc'));
-
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const history = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setSessionHistory(history);
-      }, (error) => {
-        console.error('Error fetching session history from Firestore:', error);
-        showSnackbar('Failed to load session history.', 'error');
-      });
-
-      return () => unsubscribe();
-    } else {
-      setSessionHistory([]);
-    }
-  }, [userId, appId, db, showSnackbar]);
 
   // Function to open the workout name dialog (for new or editing name)
   const handleOpenWorkoutNameDialog = (workoutToEdit = null) => {
@@ -1049,98 +1012,6 @@ const WorkoutTracker = ({
                                     }
                                 </Typography>
                             ))}
-                        </AccordionDetails>
-                    </Accordion>
-                ))
-            )}
-          </Box>
-
-          {/* New "Recent Workouts" list using Accordion */}
-          <Typography variant="h6" sx={{ color: 'text.primary', mt: 4, mb: 2 }}>
-            Recent Workouts
-          </Typography>
-          <Box sx={{ mb: 2, p: 1, borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
-            {sessionHistory.length === 0 ? (
-                <Typography variant="body2" color="textSecondary" sx={{ px: 2, py: 1 }}>
-                    {userId ? 'No recent workouts found.' : 'Sign in to see your recent workouts.'}
-                </Typography>
-            ) : (
-                sessionHistory.map((session) => (
-                    <Accordion key={session.id} sx={{ bgcolor: 'background.paper', my: 1, '&:before': { display: 'none' } }}>
-                        <AccordionSummary
-                            expandIcon={<ExpandMoreIcon sx={{ color: 'text.secondary' }} />}
-                            aria-controls={`panel-${session.id}-content`}
-                            id={`panel-${session.id}-header`}
-                            sx={{
-                                '& .MuiAccordionSummary-content': {
-                                    my: 0.5,
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                },
-                            }}
-                        >
-                            <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                                    {session.name}
-                                </Typography>
-                                <Typography variant="body2" color="textSecondary">
-                                    {formatDate(session.date)}
-                                </Typography>
-                            </Box>
-                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', mr: 2 }}>
-                                <Typography variant="body2" color="textSecondary">
-                                    Duration: {formatTime(session.duration)}
-                                </Typography>
-                                <Typography variant="body2" color="textSecondary">
-                                    Sets: {session.completedSets}
-                                </Typography>
-                            </Box>
-                            <IconButton
-                                aria-label="delete"
-                                color="error"
-                                onClick={(e) => { e.stopPropagation(); deleteSessionHistoryEntry(session.id); }}
-                                size="small"
-                            >
-                                <DeleteIcon />
-                            </IconButton>
-                        </AccordionSummary>
-                        <AccordionDetails sx={{ pt: 0 }}>
-                            <Divider sx={{ my: 1, borderColor: 'rgba(255,255,255,0.1)' }} />
-                            {session.blocks && session.blocks.map((block, blockIndex) => {
-                                let blockContent;
-                                switch (block.type) {
-                                    case 'plannedSetInstance':
-                                        blockContent = `${block.exercise}: ${block.reps} reps @ ${block.weight}kg`;
-                                        break;
-                                    case 'rest':
-                                        const restColor = block.actualDuration < block.duration ? 'warning.main' : 'success.main';
-                                        blockContent = (
-                                            <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
-                                                <TimerIcon sx={{ fontSize: '1rem', mr: 0.5, color: 'info.main' }} />
-                                                <Typography variant="body2" component="span">
-                                                    Rest: 
-                                                </Typography>
-                                                <Typography variant="body2" component="span" sx={{ color: restColor, ml: 0.5 }}>
-                                                    {block.actualDuration}s
-                                                </Typography>
-                                                <Typography variant="body2" component="span" sx={{ color: 'text.secondary', ml: 0.5 }}>
-                                                    (planned: {block.duration}s)
-                                                </Typography>
-                                            </Box>
-                                        );
-                                        break;
-                                    case 'note':
-                                        blockContent = `Note: "${block.text}"`;
-                                        break;
-                                    default:
-                                        blockContent = 'Unknown block';
-                                }
-                                return (
-                                    <Typography key={blockIndex} variant="body2" color="textSecondary" sx={{ ml: 1, my: 0.5 }}>
-                                        - {blockContent}
-                                    </Typography>
-                                );
-                            })}
                         </AccordionDetails>
                     </Accordion>
                 ))

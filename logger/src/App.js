@@ -36,6 +36,7 @@ import StopIcon from '@mui/icons-material/Stop';
 import PauseIcon from '@mui/icons-material/Pause';
 import WatchLaterIcon from '@mui/icons-material/WatchLater';
 import CheckIcon from '@mui/icons-material/Check';
+import HistoryIcon from '@mui/icons-material/History';
 
 // Import Firebase modules
 import { initializeApp } from "firebase/app";
@@ -49,6 +50,7 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  orderBy,
 } from "firebase/firestore";
 import {
   getAuth,
@@ -60,6 +62,7 @@ import {
 
 // Import the new WorkoutTracker component
 import WorkoutTracker from './WorkoutTracker';
+import SessionHistory from './SessionHistory';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -165,6 +168,7 @@ const darkTheme = createTheme({
 // Main App component for creating and listing workout sets
 const App = () => {
   const [plannedWorkouts, setPlannedWorkouts] = useState([]);
+  const [sessionHistory, setSessionHistory] = useState([]);
   const [exercise, setExercise] = useState('');
   const [sets, setSets] = useState('');
   const [reps, setReps] = useState('');
@@ -209,6 +213,16 @@ const App = () => {
     const formattedMinutes = String(minutes).padStart(2, '0');
     const formattedSeconds = String(seconds).padStart(2, '0');
     return `${formattedMinutes}:${formattedSeconds}`;
+  };
+
+  const formatDate = (isoString) => {
+    return new Date(isoString).toLocaleString([], {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
   
   // --- Stop Workout Handler ---
@@ -399,13 +413,30 @@ const App = () => {
         showSnackbar('Failed to load workout plan from cloud.', 'error');
       });
 
+      // Load session history
+      const sessionHistoryRef = collection(db, `artifacts/${appId}/users/${userId}/sessionHistory`);
+      const qHistory = query(sessionHistoryRef, orderBy('date', 'desc'));
+
+      const unsubscribeHistory = onSnapshot(qHistory, (snapshot) => {
+        const history = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setSessionHistory(history);
+      }, (error) => {
+        console.error('Error fetching session history from Firestore:', error);
+        showSnackbar('Failed to load session history.', 'error');
+      });
+
       // Cleanup subscriptions on unmount or user change
       return () => {
         unsubscribeSession();
         unsubscribeWorkouts();
+        unsubscribeHistory();
       };
     } else if (isAuthReady && !userId) {
       setPlannedWorkouts([]);
+      setSessionHistory([]);
     }
   }, [isAuthReady, userId, showSnackbar]);
 
@@ -886,7 +917,16 @@ const App = () => {
             setIsTimerRunning={setIsTimerRunning}
             setTimerSecondsLeft={setTimerSecondsLeft}
             setInitialRestDuration={setInitialRestDuration}
+          />
+        )}
+
+        {currentTab === 'history' && (
+          <SessionHistory
+            sessionHistory={sessionHistory}
+            formatDate={formatDate}
+            formatTime={formatTime}
             deleteSessionHistoryEntry={deleteSessionHistoryEntry}
+            userId={userId}
           />
         )}
 
@@ -1085,6 +1125,21 @@ const App = () => {
               minWidth: 'auto',
               px: 2,
               color: currentTab === 'sets' ? darkTheme.palette.primary.main : darkTheme.palette.text.secondary,
+              '&.Mui-selected': {
+                color: darkTheme.palette.primary.main,
+              },
+            }}
+          />
+          <Tab
+            label="History"
+            value="history"
+            icon={<HistoryIcon />}
+            sx={{
+              flexDirection: 'column',
+              fontSize: '0.75rem',
+              minWidth: 'auto',
+              px: 2,
+              color: currentTab === 'history' ? darkTheme.palette.primary.main : darkTheme.palette.text.secondary,
               '&.Mui-selected': {
                 color: darkTheme.palette.primary.main,
               },
