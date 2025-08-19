@@ -765,7 +765,7 @@ const WorkoutTracker = ({
             </>
           ) : (
             <Typography variant="body2" color="textSecondary" sx={{ textAlign: 'center', mt: 2, mb: 3 }}>
-              {userId ? 'Use the \'+' button above to create your first workout session!' : 'Sign in to create and manage your workout sessions.'}
+              {userId ? "Use the '+' button above to create your first workout session!" : 'Sign in to create and manage your workout sessions.'}
             </Typography>
           )}
 
