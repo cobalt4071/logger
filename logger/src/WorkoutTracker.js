@@ -489,7 +489,7 @@ const WorkoutTracker = ({
                                         sx={{ width: '60px' }}
                                     />
                                 ) : (
-                                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>{block.weight}</Typography>
+                                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', cursor: 'pointer' }} onClick={() => {if(block.status === 'active') toggleEditMode(index)}}>{block.weight}</Typography>
                                 )}
                               </Box>
                               <Divider orientation="vertical" flexItem sx={{ mx: 1 }}/>
@@ -508,12 +508,12 @@ const WorkoutTracker = ({
                                         sx={{ width: '60px' }}
                                     />
                                 ) : (
-                                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>{block.reps}</Typography>
+                                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', cursor: 'pointer' }} onClick={() => {if(block.status === 'active') toggleEditMode(index)}}>{block.reps}</Typography>
                                 )}
                               </Box>
                           </Box>
-                          {block.status === 'active' && (
-                            <IconButton onClick={() => toggleEditMode(index)} size="small" sx={{ ml: 1 }}>
+                          {block.status === 'active' && !block.isEditing && (
+                            <IconButton onClick={() => toggleEditMode(index)} size="small" sx={{ ml: 1, visibility: 'hidden' }}>
                                 <EditIcon />
                             </IconButton>
                           )}
