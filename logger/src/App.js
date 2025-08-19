@@ -263,7 +263,7 @@ const App = () => {
       showSnackbar('Workout Complete! Great job!', 'success');
       setIsFinishConfirmDialogOpen(true);
     }
-  }, [showSnackbar, handleStopWorkout, setIsFinishConfirmDialogOpen]);
+  }, [showSnackbar, setIsFinishConfirmDialogOpen]);
   
   // 1. Firebase Authentication Setup
   useEffect(() => {
