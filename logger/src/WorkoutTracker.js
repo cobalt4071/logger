@@ -654,15 +654,6 @@ const WorkoutTracker = ({
             >
               Stop
             </Button>
-            <Button
-              variant="contained"
-              color="secondary"
-              onClick={() => setView('list')}
-              startIcon={<ArrowBackIcon />}
-              sx={{ borderRadius: '8px', px: 4, py: 1.5 }}
-            >
-              Back to Workouts
-            </Button>
           </Box>
         </Box>
 
