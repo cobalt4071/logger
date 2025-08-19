@@ -50,6 +50,7 @@ const WorkoutTracker = ({
   handleStartWorkoutSession, handleBlockCompletion, handlePauseResume, handleStopWorkout,
   advanceToNextActiveBlock,
   setActiveWorkoutSession, setPlaybackBlocks, setIsTimerRunning, setTimerSecondsLeft, setInitialRestDuration,
+  deleteSessionHistoryEntry,
 }) => {
   // State for the current workout being constructed or edited
   const [currentWorkoutName, setCurrentWorkoutName] = useState('');
@@ -1086,7 +1087,7 @@ const WorkoutTracker = ({
                                     {formatDate(session.date)}
                                 </Typography>
                             </Box>
-                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', mr: 2 }}>
                                 <Typography variant="body2" color="textSecondary">
                                     Duration: {formatTime(session.duration)}
                                 </Typography>
@@ -1094,6 +1095,14 @@ const WorkoutTracker = ({
                                     Sets: {session.completedSets}
                                 </Typography>
                             </Box>
+                            <IconButton
+                                aria-label="delete"
+                                color="error"
+                                onClick={(e) => { e.stopPropagation(); deleteSessionHistoryEntry(session.id); }}
+                                size="small"
+                            >
+                                <DeleteIcon />
+                            </IconButton>
                         </AccordionSummary>
                         <AccordionDetails sx={{ pt: 0 }}>
                             <Divider sx={{ my: 1, borderColor: 'rgba(255,255,255,0.1)' }} />

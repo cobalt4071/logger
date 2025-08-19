@@ -582,6 +582,22 @@ const App = () => {
     }
   };
 
+  const deleteSessionHistoryEntry = async (sessionIdToDelete) => {
+    if (!userId) {
+      showSnackbar('Please sign in to delete session history.', 'error');
+      return;
+    }
+    try {
+      if (window.confirm('Are you sure you want to delete this workout session from your history? This action cannot be undone.')) {
+        await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/sessionHistory`, sessionIdToDelete));
+        showSnackbar('Workout session deleted from history.', 'info');
+      }
+    } catch (error) {
+      console.error('Error deleting session from Firestore:', error);
+      showSnackbar(`Failed to delete session from history: ${error.message}`, 'error');
+    }
+  };
+
   // Filtered workouts based on search query
   const filteredWorkouts = plannedWorkouts.filter(workout =>
     workout.exercise.toLowerCase().includes(searchQuery.toLowerCase())
@@ -870,6 +886,7 @@ const App = () => {
             setIsTimerRunning={setIsTimerRunning}
             setTimerSecondsLeft={setTimerSecondsLeft}
             setInitialRestDuration={setInitialRestDuration}
+            deleteSessionHistoryEntry={deleteSessionHistoryEntry}
           />
         )}
 
