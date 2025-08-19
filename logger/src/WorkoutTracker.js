@@ -352,20 +352,14 @@ const WorkoutTracker = ({
   // --- End Drag and Drop Handlers ---
 
   // Function to toggle edit mode for a playback block
-  const toggleEditMode = async (index) => {
+  const toggleEditMode = (index) => {
     const updatedPlaybackBlocks = playbackBlocks.map((block, i) => {
       if (i === index) {
         return { ...block, isEditing: !block.isEditing };
       }
-      return block;
+      return { ...block, isEditing: false }; // Close other editing blocks
     });
     setPlaybackBlocks(updatedPlaybackBlocks);
-
-    // Persist the change to Firestore
-    if (activeWorkoutSession && userId) {
-      const sessionDocRef = doc(db, `artifacts/${appId}/users/${userId}/activeSession/state`);
-      await setDoc(sessionDocRef, { playbackBlocks: updatedPlaybackBlocks }, { merge: true });
-    }
   };
 
   // Function to handle value changes in editable fields
@@ -487,7 +481,6 @@ const WorkoutTracker = ({
                                         onKeyPress={(e) => { if (e.key === 'Enter') saveEditedBlock(index); }}
                                         size="small"
                                         sx={{ width: '60px', height: '40px' }}
-                                        autoFocus
                                     />
                                 ) : (
                                     <Box
@@ -522,7 +515,6 @@ const WorkoutTracker = ({
                                         onKeyPress={(e) => { if (e.key === 'Enter') saveEditedBlock(index); }}
                                         size="small"
                                         sx={{ width: '60px', height: '40px' }}
-                                        autoFocus
                                     />
                                 ) : (
                                     <Box
