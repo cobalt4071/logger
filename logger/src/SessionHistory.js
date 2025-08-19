@@ -35,7 +35,7 @@ const SessionHistory = ({
       </Typography>
       <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
         <TextField
-          label="Search by name"
+          label="Search Workouts"
           variant="outlined"
           fullWidth
           value={historySearchQuery}
