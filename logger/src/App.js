@@ -226,32 +226,50 @@ const App = () => {
       return;
     }
 
-    const completedSets = playbackBlocks
-      .filter(block => block.type === 'plannedSetInstance' && block.status === 'completed')
-      .map(block => ({
-        type: 'plannedSetInstance',
-        exercise: block.exercise,
-        weight: block.weight,
-        reps: block.reps,
-      }));
+    const completedBlocks = playbackBlocks
+      .filter(block => block.status === 'completed')
+      .map(block => {
+        if (block.type === 'plannedSetInstance') {
+          return {
+            type: 'plannedSetInstance',
+            exercise: block.exercise,
+            weight: block.weight,
+            reps: block.reps,
+          };
+        }
+        if (block.type === 'rest') {
+          return {
+            type: 'rest',
+            duration: block.duration,
+            actualDuration: block.actualDuration,
+          };
+        }
+        if (block.type === 'note') {
+            return {
+                type: 'note',
+                text: block.text,
+            };
+        }
+        return null;
+      }).filter(Boolean);
 
-    if (completedSets.length > 0) {
+    if (completedBlocks.length > 0) {
       try {
         const sessionData = {
           name: activeWorkoutSession.name,
           date: new Date().toISOString(),
           userId: userId,
-          blocks: completedSets,
+          blocks: completedBlocks,
         };
 
         await addDoc(collection(db, `artifacts/${appId}/users/${userId}/sessionHistory`), sessionData);
-        showSnackbar(`Workout session with ${completedSets.length} completed sets saved to history!`, 'success');
+        showSnackbar(`Workout session with ${completedBlocks.length} completed blocks saved to history!`, 'success');
       } catch (error) {
         console.error('Error saving session history to Firestore:', error);
         showSnackbar(`Failed to save session history: ${error.message}`, 'error');
       }
     } else {
-        showSnackbar('No completed sets to save.', 'info');
+        showSnackbar('No completed blocks to save.', 'info');
     }
 
     // Now, stop the workout
@@ -264,11 +282,21 @@ const App = () => {
     const docSnap = await getDoc(sessionDocRef.current);
     if (!docSnap.exists()) return;
 
-    const currentBlocks = docSnap.data().playbackBlocks;
+    const data = docSnap.data();
+    const currentBlocks = data.playbackBlocks;
+    const currentTimerSecondsLeft = data.timerSecondsLeft;
+    const currentInitialRestDuration = data.initialRestDuration;
+
     const findActiveBlockIndex = currentBlocks.findIndex(block => block.status === 'active');
     if (findActiveBlockIndex === -1) return;
 
     const newPlaybackBlocks = [...currentBlocks];
+    const activeBlock = newPlaybackBlocks[findActiveBlockIndex];
+
+    if (activeBlock.type === 'rest') {
+      activeBlock.actualDuration = currentInitialRestDuration - currentTimerSecondsLeft;
+    }
+
     newPlaybackBlocks[findActiveBlockIndex].status = 'completed';
 
     const nextPendingNonNoteIndex = newPlaybackBlocks.findIndex((block, index) =>

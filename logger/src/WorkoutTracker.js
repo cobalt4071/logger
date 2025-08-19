@@ -1077,18 +1077,41 @@ const WorkoutTracker = ({
                         </AccordionSummary>
                         <AccordionDetails sx={{ pt: 0 }}>
                             <Divider sx={{ my: 1, borderColor: 'rgba(255,255,255,0.1)' }} />
-                            {session.blocks && session.blocks.map((block, blockIndex) => (
-                                <Typography key={blockIndex} variant="body2" color="textSecondary" sx={{ ml: 1, my: 0.5 }}>
-                                    - {block.exercise 
-                                        ? `${block.exercise}: ${block.reps} reps @ ${block.weight}kg`
-                                        : block.type === 'rest' 
-                                        ? `Rest: ${block.duration}s` 
-                                        : block.type === 'note' 
-                                        ? `Note: "${block.text}"`
-                                        : 'Completed Set'
-                                    }
-                                </Typography>
-                            ))}
+                            {session.blocks && session.blocks.map((block, blockIndex) => {
+                                let blockContent;
+                                switch (block.type) {
+                                    case 'plannedSetInstance':
+                                        blockContent = `${block.exercise}: ${block.reps} reps @ ${block.weight}kg`;
+                                        break;
+                                    case 'rest':
+                                        const restColor = block.actualDuration < block.duration ? 'warning.main' : 'success.main';
+                                        blockContent = (
+                                            <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
+                                                <TimerIcon sx={{ fontSize: '1rem', mr: 0.5, color: 'info.main' }} />
+                                                <Typography variant="body2" component="span">
+                                                    Rest: 
+                                                </Typography>
+                                                <Typography variant="body2" component="span" sx={{ color: restColor, ml: 0.5 }}>
+                                                    {block.actualDuration}s
+                                                </Typography>
+                                                <Typography variant="body2" component="span" sx={{ color: 'text.secondary', ml: 0.5 }}>
+                                                    (planned: {block.duration}s)
+                                                </Typography>
+                                            </Box>
+                                        );
+                                        break;
+                                    case 'note':
+                                        blockContent = `Note: "${block.text}"`;
+                                        break;
+                                    default:
+                                        blockContent = 'Unknown block';
+                                }
+                                return (
+                                    <Typography key={blockIndex} variant="body2" color="textSecondary" sx={{ ml: 1, my: 0.5 }}>
+                                        - {blockContent}
+                                    </Typography>
+                                );
+                            })}
                         </AccordionDetails>
                     </Accordion>
                 ))
