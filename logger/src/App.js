@@ -35,6 +35,7 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import StopIcon from '@mui/icons-material/Stop';
 import PauseIcon from '@mui/icons-material/Pause';
 import WatchLaterIcon from '@mui/icons-material/WatchLater';
+import CheckIcon from '@mui/icons-material/Check';
 
 // Import Firebase modules
 import { initializeApp } from "firebase/app";
@@ -662,6 +663,9 @@ const App = () => {
           <Box>
             <IconButton onClick={handlePauseResume} size="small" color="inherit">
               {isTimerRunning ? <PauseIcon /> : <PlayArrowIcon />}
+            </IconButton>
+            <IconButton onClick={handleStopWorkout} size="small" color="inherit">
+              <CheckIcon />
             </IconButton>
             <IconButton onClick={handleStopWorkout} size="small" color="inherit">
               <StopIcon />
