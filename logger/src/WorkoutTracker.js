@@ -1064,10 +1064,10 @@ const WorkoutTracker = ({
           </Box>
 
           {/* New "Recent Workouts" list using Accordion */}
-          <Box sx={{ mt: 4, mb: 2, p: 1, borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
-            <Typography variant="h6" sx={{ color: 'text.primary', p: 2 }}>
-              Recent Workouts
-            </Typography>
+          <Typography variant="h6" sx={{ color: 'text.primary', mt: 4, mb: 2 }}>
+            Recent Workouts
+          </Typography>
+          <Box sx={{ mb: 2, p: 1, borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
             {sessionHistory.length === 0 ? (
                 <Typography variant="body2" color="textSecondary" sx={{ px: 2, py: 1 }}>
                     {userId ? 'No recent workouts found.' : 'Sign in to see your recent workouts.'}
