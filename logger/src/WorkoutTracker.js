@@ -351,6 +351,52 @@ const WorkoutTracker = ({
   };
   // --- End Drag and Drop Handlers ---
 
+  // Function to toggle edit mode for a playback block
+  const toggleEditMode = async (index) => {
+    const updatedPlaybackBlocks = playbackBlocks.map((block, i) => {
+      if (i === index) {
+        return { ...block, isEditing: !block.isEditing };
+      }
+      return block;
+    });
+    setPlaybackBlocks(updatedPlaybackBlocks);
+
+    // Persist the change to Firestore
+    if (activeWorkoutSession && userId) {
+      const sessionDocRef = doc(db, `artifacts/${appId}/users/${userId}/activeSession/state`);
+      await setDoc(sessionDocRef, { playbackBlocks: updatedPlaybackBlocks }, { merge: true });
+    }
+  };
+
+  // Function to handle value changes in editable fields
+  const handleValueChange = (index, field, value) => {
+    const updatedPlaybackBlocks = playbackBlocks.map((block, i) => {
+      if (i === index) {
+        return { ...block, [field]: value };
+      }
+      return block;
+    });
+    setPlaybackBlocks(updatedPlaybackBlocks);
+  };
+
+  // Function to save edited block data to Firestore
+  const saveEditedBlock = async (index) => {
+    if (activeWorkoutSession && userId) {
+      const blockToSave = playbackBlocks[index];
+      const updatedPlaybackBlocks = playbackBlocks.map((block, i) => {
+        if (i === index) {
+          return { ...block, isEditing: false }; // Exit edit mode after saving
+        }
+        return block;
+      });
+      setPlaybackBlocks(updatedPlaybackBlocks); // Update local state to exit edit mode
+
+      const sessionDocRef = doc(db, `artifacts/${appId}/users/${userId}/activeSession/state`);
+      await setDoc(sessionDocRef, { playbackBlocks: updatedPlaybackBlocks }, { merge: true });
+      showSnackbar('Workout block updated!', 'success');
+    }
+  };
+
   return (
     <Paper elevation={3} sx={{ p: 3, borderRadius: 2, position: 'relative' }}>
       {view === 'playback' && activeWorkoutSession ? (
@@ -433,16 +479,45 @@ const WorkoutTracker = ({
                                 <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textTransform: 'uppercase', fontSize: '0.6rem' }}>
                                   Weight
                                 </Typography>
-                                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>{block.weight}</Typography>
+                                {block.isEditing ? (
+                                    <TextField
+                                        type="number"
+                                        value={block.weight}
+                                        onChange={(e) => handleValueChange(index, 'weight', parseFloat(e.target.value))}
+                                        onBlur={() => saveEditedBlock(index)}
+                                        onKeyPress={(e) => { if (e.key === 'Enter') saveEditedBlock(index); }}
+                                        size="small"
+                                        sx={{ width: '60px' }}
+                                    />
+                                ) : (
+                                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>{block.weight}</Typography>
+                                )}
                               </Box>
                               <Divider orientation="vertical" flexItem sx={{ mx: 1 }}/>
                               <Box sx={{ textAlign: 'center', flexGrow: 1 }}>
                                 <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textTransform: 'uppercase', fontSize: '0.6rem' }}>
                                   Reps
                                 </Typography>
-                                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>{block.reps}</Typography>
+                                {block.isEditing ? (
+                                    <TextField
+                                        type="number"
+                                        value={block.reps}
+                                        onChange={(e) => handleValueChange(index, 'reps', parseInt(e.target.value))}
+                                        onBlur={() => saveEditedBlock(index)}
+                                        onKeyPress={(e) => { if (e.key === 'Enter') saveEditedBlock(index); }}
+                                        size="small"
+                                        sx={{ width: '60px' }}
+                                    />
+                                ) : (
+                                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>{block.reps}</Typography>
+                                )}
                               </Box>
                           </Box>
+                          {block.status === 'active' && (
+                            <IconButton onClick={() => toggleEditMode(index)} size="small" sx={{ ml: 1 }}>
+                                <EditIcon />
+                            </IconButton>
+                          )}
                           <FormControlLabel
                             control={
                               <Checkbox
