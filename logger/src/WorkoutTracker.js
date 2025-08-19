@@ -76,6 +76,7 @@ const WorkoutTracker = ({
 
   // State to store created workouts (fetched from Firestore)
   const [createdWorkouts, setCreatedWorkouts] = useState([]);
+  const [sessionHistory, setSessionHistory] = useState([]);
 
   // Add missing refs
   const activeBlockRef = useRef(null);
@@ -126,6 +127,29 @@ const WorkoutTracker = ({
       setCreatedWorkouts([]); // Clear created workouts if no user
     }
   }, [userId, appId, db, showSnackbar]); // Added showSnackbar to dependencies
+
+  // Effect to load session history from Firestore
+  useEffect(() => {
+    if (userId) {
+      const sessionHistoryRef = collection(db, `artifacts/${appId}/users/${userId}/sessionHistory`);
+      const q = query(sessionHistoryRef, orderBy('date', 'desc'));
+
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const history = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setSessionHistory(history);
+      }, (error) => {
+        console.error('Error fetching session history from Firestore:', error);
+        showSnackbar('Failed to load session history.', 'error');
+      });
+
+      return () => unsubscribe();
+    } else {
+      setSessionHistory([]);
+    }
+  }, [userId, appId, db, showSnackbar]);
 
   // Function to open the workout name dialog (for new or editing name)
   const handleOpenWorkoutNameDialog = (workoutToEdit = null) => {
@@ -1027,6 +1051,57 @@ const WorkoutTracker = ({
                                 <Typography key={blockIndex} variant="body2" color="textSecondary" sx={{ ml: 1, my: 0.5 }}>
                                     - {block.type === 'plannedSet'
                                         ? `${block.plannedSetDetails.exercise}: ${block.plannedSetDetails.sets}x${block.plannedSetDetails.reps}`
+                                        : block.type === 'rest'
+                                        ? `Rest: ${block.duration}s`
+                                        : `Note: "${block.text}"`
+                                    }
+                                </Typography>
+                            ))}
+                        </AccordionDetails>
+                    </Accordion>
+                ))
+            )}
+          </Box>
+
+          {/* New "Recent Workouts" list using Accordion */}
+          <Box sx={{ mt: 4, mb: 2, p: 1, borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <Typography variant="h6" sx={{ color: 'text.primary', p: 2 }}>
+              Recent Workouts
+            </Typography>
+            {sessionHistory.length === 0 ? (
+                <Typography variant="body2" color="textSecondary" sx={{ px: 2, py: 1 }}>
+                    {userId ? 'No recent workouts found.' : 'Sign in to see your recent workouts.'}
+                </Typography>
+            ) : (
+                sessionHistory.map((session) => (
+                    <Accordion key={session.id} sx={{ bgcolor: 'background.paper', my: 1, '&:before': { display: 'none' } }}>
+                        <AccordionSummary
+                            expandIcon={<ExpandMoreIcon sx={{ color: 'text.secondary' }} />}
+                            aria-controls={`panel-${session.id}-content`}
+                            id={`panel-${session.id}-header`}
+                            sx={{
+                                '& .MuiAccordionSummary-content': {
+                                    my: 0.5,
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                },
+                            }}
+                        >
+                            <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+                                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                                    {session.name}
+                                </Typography>
+                                <Typography variant="body2" color="textSecondary" sx={{ ml: 1 }}>
+                                    {formatDate(session.date)}
+                                </Typography>
+                            </Box>
+                        </AccordionSummary>
+                        <AccordionDetails sx={{ pt: 0 }}>
+                            <Divider sx={{ my: 1, borderColor: 'rgba(255,255,255,0.1)' }} />
+                            {session.blocks.map((block, blockIndex) => (
+                                <Typography key={blockIndex} variant="body2" color="textSecondary" sx={{ ml: 1, my: 0.5 }}>
+                                    - {block.type === 'plannedSetInstance' // Assuming the history block type is plannedSetInstance
+                                        ? `${block.exercise}: ${block.reps} reps @ ${block.weight}kg`
                                         : block.type === 'rest'
                                         ? `Rest: ${block.duration}s`
                                         : `Note: "${block.text}"`
