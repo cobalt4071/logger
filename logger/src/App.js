@@ -219,6 +219,46 @@ const App = () => {
     showSnackbar('Workout stopped.', 'info');
   }, [userId, showSnackbar]);
 
+  // --- Finish and Save Workout Handler ---
+  const handleFinishWorkoutAndSave = async () => {
+    if (!userId || !activeWorkoutSession) {
+      showSnackbar('No active workout to finish or user not signed in.', 'warning');
+      return;
+    }
+
+    const completedSets = playbackBlocks
+      .filter(block => block.type === 'plannedSetInstance' && block.status === 'completed')
+      .map(block => ({
+        type: 'plannedSetInstance',
+        exercise: block.exercise,
+        weight: block.weight,
+        reps: block.reps,
+      }));
+
+    if (completedSets.length > 0) {
+      try {
+        const sessionData = {
+          name: activeWorkoutSession.name,
+          date: new Date().toISOString(),
+          userId: userId,
+          blocks: completedSets,
+        };
+
+        await addDoc(collection(db, `artifacts/${appId}/users/${userId}/sessionHistory`), sessionData);
+        showSnackbar(`Workout session with ${completedSets.length} completed sets saved to history!`, 'success');
+      } catch (error) {
+        console.error('Error saving session history to Firestore:', error);
+        showSnackbar(`Failed to save session history: ${error.message}`, 'error');
+      }
+    } else {
+        showSnackbar('No completed sets to save.', 'info');
+    }
+
+    // Now, stop the workout
+    handleStopWorkout();
+    setIsFinishConfirmDialogOpen(false);
+  };
+
   // --- Advance Block Handler ---
   const advanceToNextActiveBlock = useCallback(async () => {
     const docSnap = await getDoc(sessionDocRef.current);
@@ -931,7 +971,7 @@ const App = () => {
             <Button onClick={() => setIsFinishConfirmDialogOpen(false)} color="secondary">
               Cancel
             </Button>
-            <Button onClick={() => { handleStopWorkout(); setIsFinishConfirmDialogOpen(false); }} color="primary">
+            <Button onClick={handleFinishWorkoutAndSave} color="primary">
               Finish
             </Button>
           </DialogActions>

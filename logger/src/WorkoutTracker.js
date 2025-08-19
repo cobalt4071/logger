@@ -375,48 +375,6 @@ const WorkoutTracker = ({
   };
   // --- End Drag and Drop Handlers ---
 
-  const handleFinishWorkout = async () => {
-    window.alert('handleFinishWorkout called!'); // For debugging
-
-    if (!userId || !activeWorkoutSession) {
-      showSnackbar('No active workout to finish or user not signed in.', 'warning');
-      return;
-    }
-
-    const completedSets = playbackBlocks
-      .filter(block => block.type === 'plannedSetInstance' && block.status === 'completed')
-      .map(block => ({
-        type: 'plannedSetInstance',
-        exercise: block.exercise,
-        weight: block.weight,
-        reps: block.reps,
-      }));
-
-    if (completedSets.length > 0) {
-      try {
-        const sessionData = {
-          name: activeWorkoutSession.name,
-          date: new Date().toISOString(),
-          userId: userId,
-          blocks: completedSets,
-        };
-
-        await addDoc(collection(db, `artifacts/${appId}/users/${userId}/sessionHistory`), sessionData);
-        showSnackbar(`Workout session with ${completedSets.length} completed sets saved to history!`, 'success');
-      } catch (error) {
-        console.error('Error saving session history to Firestore:', error);
-        showSnackbar(`Failed to save session history: ${error.message}`, 'error');
-      }
-    } else {
-        const totalSets = playbackBlocks.filter(b => b.type === 'plannedSetInstance').length;
-        const completedCount = playbackBlocks.filter(b => b.type === 'plannedSetInstance' && b.status === 'completed').length;
-        showSnackbar(`No completed sets to save. Total sets in workout: ${totalSets}, sets marked as complete: ${completedCount}.`, 'warning');
-    }
-
-    // Finally, call the original stop workout function
-    handleStopWorkout();
-  };
-
   // Function to toggle edit mode for a playback block
   const toggleEditMode = (index) => {
     const updatedPlaybackBlocks = playbackBlocks.map((block, i) => {
@@ -700,27 +658,6 @@ const WorkoutTracker = ({
               This workout has no blocks to play.
             </Typography>
           )}
-
-          {/* Playback Controls */}
-          <Box sx={{ mt: 3, textAlign: 'center', display: 'flex', justifyContent: 'center', gap: 2 }}>
-            <Button
-              variant={isTimerRunning ? "outlined" : "contained"}
-              color="warning"
-              onClick={handlePauseResume}
-              sx={{ borderRadius: '8px', px: 4, py: 1.5 }}
-              disabled={initialRestDuration === 0}
-            >
-              {isTimerRunning ? 'Pause' : 'Resume'}
-            </Button>
-            <Button
-              variant="contained"
-              color="error"
-              onClick={handleFinishWorkout}
-              sx={{ borderRadius: '8px', px: 4, py: 1.5 }}
-            >
-              Finish
-            </Button>
-          </Box>
         </Box>
 
       ) : (
