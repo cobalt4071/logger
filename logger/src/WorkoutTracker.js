@@ -521,7 +521,7 @@ const WorkoutTracker = ({
                                             alignItems: 'center',
                                             justifyContent: 'center',
                                             border: '1px solid',
-                                            borderColor: block.status === 'active' ? 'grey.500' : 'transparent',
+                                            borderColor: 'grey.500',
                                             borderRadius: '4px',
                                             cursor: block.status === 'active' ? 'pointer' : 'default',
                                         }}
@@ -561,7 +561,7 @@ const WorkoutTracker = ({
                                             alignItems: 'center',
                                             justifyContent: 'center',
                                             border: '1px solid',
-                                            borderColor: block.status === 'active' ? 'grey.500' : 'transparent',
+                                            borderColor: 'grey.500',
                                             borderRadius: '4px',
                                             cursor: block.status === 'active' ? 'pointer' : 'default',
                                         }}
