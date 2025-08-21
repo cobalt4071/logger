@@ -452,7 +452,8 @@ const WorkoutTracker = ({
                       elevation={block.status === 'active' ? 3 : 1}
                       sx={{
                         mb: isNextBlockNewGroup || isLastBlockOverall ? 0.5 : 0,
-                        py: block.type === 'rest' ? 0.25 : 0.75,
+                        pt: block.type === 'rest' ? 0.25 : 0.75,
+                        pb: block.type === 'plannedSetInstance' ? 2.75 : (block.type === 'rest' ? 0.25 : 0.75),
                         px: 0.75,
                         borderRadius: 0,
                         bgcolor: block.type === 'rest' 
@@ -521,7 +522,7 @@ const WorkoutTracker = ({
                                             alignItems: 'center',
                                             justifyContent: 'center',
                                             border: '1px solid',
-                                            borderColor: 'grey.500',
+                                            borderColor: 'divider',
                                             borderRadius: '4px',
                                             cursor: block.status === 'active' ? 'pointer' : 'default',
                                         }}
@@ -561,7 +562,7 @@ const WorkoutTracker = ({
                                             alignItems: 'center',
                                             justifyContent: 'center',
                                             border: '1px solid',
-                                            borderColor: 'grey.500',
+                                            borderColor: 'divider',
                                             borderRadius: '4px',
                                             cursor: block.status === 'active' ? 'pointer' : 'default',
                                         }}
