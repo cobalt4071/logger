@@ -448,10 +448,40 @@ const WorkoutTracker = ({
                       </Typography>
                     )}
 
+                    {playbackBlocks.map((block, index) => {
+                // Helper to get the exercise name from a block, if available
+                const getExerciseFromBlock = (b) => {
+                  if (!b) return null;
+                  if (b.type === 'plannedSetInstance') return b.exercise;
+                  if (b.type === 'rest' && b.originatingPlannedSet) return b.originatingPlannedSet;
+                  return null;
+                };
+
+                // Determine if this block is an exercise and if its predecessor was a different exercise or not an exercise at all.
+                const isExercise = block.type === 'plannedSetInstance';
+                const prevBlock = index > 0 ? playbackBlocks[index - 1] : null;
+                const shouldRenderHeading = isExercise && getExerciseFromBlock(prevBlock) !== block.exercise;
+
+                return (
+                  <React.Fragment key={index}>
+                    {/* Conditionally render the exercise name as a heading */}
+                    {shouldRenderHeading && (
+                      <>
+                        <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, color: 'text.primary', fontWeight: 'bold' }}>
+                          {block.exercise}
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1, pl: '48px', pr: '104px' }}>
+                          <Typography variant="caption" color="textSecondary" sx={{ width: '60px', textAlign: 'center' }}>SET</Typography>
+                          <Typography variant="caption" color="textSecondary" sx={{ width: '60px', textAlign: 'center' }}>WEIGHT</Typography>
+                          <Typography variant="caption" color="textSecondary" sx={{ width: '60px', textAlign: 'center' }}>REPS</Typography>
+                        </Box>
+                      </>
+                    )}
+
                     <Paper
                       elevation={block.status === 'active' ? 3 : 1}
                       sx={{
-                        mb: isNextBlockNewGroup || isLastBlockOverall ? 0.5 : 0,
+                        mb: 0,
                         py: block.type === 'rest' ? 0.25 : 0.75,
                         px: 0.75,
                         borderRadius: 0,
@@ -481,95 +511,78 @@ const WorkoutTracker = ({
                           <ListItemIcon sx={{ minWidth: '32px', mr: 1, alignSelf: 'center' }}>
                             <FitnessCenterIcon fontSize="medium" color="success" />
                           </ListItemIcon>
-                          <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1 }}>
-                              <Box sx={{ textAlign: 'center', flexGrow: 1 }}>
-                                <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textTransform: 'uppercase', fontSize: '0.6rem' }}>
-                                  Set
-                                </Typography>
-                                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                                  {block.currentSetNum}
-                                </Typography>
-                              </Box>
-                              <Divider orientation="vertical" flexItem sx={{ mx: 1 }}/>
-                              <Box sx={{ textAlign: 'center', flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textTransform: 'uppercase', fontSize: '0.6rem' }}>
-                                  Weight
-                                </Typography>
-                                {block.isEditing ? (
-                                    <TextField
-                                        type="number"
-                                        value={block.weight}
-                                        onChange={(e) => handleValueChange(index, 'weight', parseFloat(e.target.value))}
-                                        onBlur={() => saveEditedBlock(index)}
-                                        onKeyPress={(e) => { if (e.key === 'Enter') saveEditedBlock(index); }}
-                                        size="small"
-                                        sx={{
-                                            width: '60px',
-                                            '& .MuiOutlinedInput-root': {
-                                                borderRadius: '4px',
-                                                height: '40px',
-                                            },
-                                        }}
-                                    />
-                                ) : (
-                                    <Box
-                                        onClick={() => {if(block.status === 'active') toggleEditMode(index)}}
-                                        sx={{
-                                            width: '60px',
-                                            height: '40px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            border: '1px solid',
-                                            borderColor: 'divider',
-                                            borderRadius: '4px',
-                                            cursor: block.status === 'active' ? 'pointer' : 'default',
-                                        }}
-                                    >
-                                        <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>{block.weight}</Typography>
-                                    </Box>
-                                )}
-                              </Box>
-                              <Divider orientation="vertical" flexItem sx={{ mx: 1 }}/>
-                              <Box sx={{ textAlign: 'center', flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textTransform: 'uppercase', fontSize: '0.6rem' }}>
-                                  Reps
-                                </Typography>
-                                {block.isEditing ? (
-                                    <TextField
-                                        type="number"
-                                        value={block.reps}
-                                        onChange={(e) => handleValueChange(index, 'reps', parseInt(e.target.value))}
-                                        onBlur={() => saveEditedBlock(index)}
-                                        onKeyPress={(e) => { if (e.key === 'Enter') saveEditedBlock(index); }}
-                                        size="small"
-                                        sx={{
-                                            width: '60px',
-                                            '& .MuiOutlinedInput-root': {
-                                                borderRadius: '4px',
-                                                height: '40px',
-                                            },
-                                        }}
-                                    />
-                                ) : (
-                                    <Box
-                                        onClick={() => {if(block.status === 'active') toggleEditMode(index)}}
-                                        sx={{
-                                            width: '60px',
-                                            height: '40px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            border: '1px solid',
-                                            borderColor: 'divider',
-                                            borderRadius: '4px',
-                                            cursor: block.status === 'active' ? 'pointer' : 'default',
-                                        }}
-                                    >
-                                        <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>{block.reps}</Typography>
-                                    </Box>
-                                )}
-                              </Box>
+                          <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'space-around', alignItems: 'center', gap: 1 }}>
+                              <Typography variant="subtitle1" sx={{ fontWeight: 'bold', width: '60px', textAlign: 'center' }}>
+                                {block.currentSetNum}
+                              </Typography>
+                              {block.isEditing ? (
+                                  <TextField
+                                      type="number"
+                                      value={block.weight}
+                                      onChange={(e) => handleValueChange(index, 'weight', parseFloat(e.target.value))}
+                                      onBlur={() => saveEditedBlock(index)}
+                                      onKeyPress={(e) => { if (e.key === 'Enter') saveEditedBlock(index); }}
+                                      size="small"
+                                      sx={{
+                                          width: '60px',
+                                          '& .MuiOutlinedInput-root': {
+                                              borderRadius: '4px',
+                                              height: '40px',
+                                          },
+                                      }}
+                                  />
+                              ) : (
+                                  <Box
+                                      onClick={() => {if(block.status === 'active') toggleEditMode(index)}}
+                                      sx={{
+                                          width: '60px',
+                                          height: '40px',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          border: '1px solid',
+                                          borderColor: 'divider',
+                                          borderRadius: '4px',
+                                          cursor: block.status === 'active' ? 'pointer' : 'default',
+                                      }}
+                                  >
+                                      <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>{block.weight}</Typography>
+                                  </Box>
+                              )}
+                              {block.isEditing ? (
+                                  <TextField
+                                      type="number"
+                                      value={block.reps}
+                                      onChange={(e) => handleValueChange(index, 'reps', parseInt(e.target.value))}
+                                      onBlur={() => saveEditedBlock(index)}
+                                      onKeyPress={(e) => { if (e.key === 'Enter') saveEditedBlock(index); }}
+                                      size="small"
+                                      sx={{
+                                          width: '60px',
+                                          '& .MuiOutlinedInput-root': {
+                                              borderRadius: '4px',
+                                              height: '40px',
+                                          },
+                                      }}
+                                  />
+                              ) : (
+                                  <Box
+                                      onClick={() => {if(block.status === 'active') toggleEditMode(index)}}
+                                      sx={{
+                                          width: '60px',
+                                          height: '40px',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          border: '1px solid',
+                                          borderColor: 'divider',
+                                          borderRadius: '4px',
+                                          cursor: block.status === 'active' ? 'pointer' : 'default',
+                                      }}
+                                  >
+                                      <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>{block.reps}</Typography>
+                                  </Box>
+                              )}
                           </Box>
                           <Box sx={{ width: 40, ml: 1 }} />
                           <FormControlLabel
