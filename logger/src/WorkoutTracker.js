@@ -437,7 +437,7 @@ const WorkoutTracker = ({
                         <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, color: 'text.primary', fontWeight: 'bold' }}>
                           {block.exercise}
                         </Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1, pl: '48px', pr: '104px' }}>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', mb: 1, pl: '48px', pr: '104px' }}>
                           <Typography variant="caption" color="textSecondary" sx={{ width: '60px', textAlign: 'center' }}>SET</Typography>
                           <Typography variant="caption" color="textSecondary" sx={{ width: '60px', textAlign: 'center' }}>WEIGHT</Typography>
                           <Typography variant="caption" color="textSecondary" sx={{ width: '60px', textAlign: 'center' }}>REPS</Typography>
