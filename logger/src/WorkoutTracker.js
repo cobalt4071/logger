@@ -452,8 +452,7 @@ const WorkoutTracker = ({
                       elevation={block.status === 'active' ? 3 : 1}
                       sx={{
                         mb: isNextBlockNewGroup || isLastBlockOverall ? 0.5 : 0,
-                        pt: block.type === 'rest' ? 0.25 : 0.75,
-                        pb: block.type === 'plannedSetInstance' ? 2.75 : (block.type === 'rest' ? 0.25 : 0.75),
+                        py: block.type === 'rest' ? 0.25 : 0.75,
                         px: 0.75,
                         borderRadius: 0,
                         bgcolor: block.type === 'rest' 
