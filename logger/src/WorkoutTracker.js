@@ -442,9 +442,14 @@ const WorkoutTracker = ({
                       elevation={block.status === 'active' ? 3 : 1}
                       sx={{
                         mb: 0.5,
-                        p: 0.75,
+                        py: block.type === 'rest' ? 0.25 : 0.75,
+                        px: 0.75,
                         borderRadius: 2,
-                        bgcolor: block.status === 'active' ? 'action.hover' : 'background.paper',
+                        bgcolor: block.type === 'rest' 
+                          ? '#2c2c2c'
+                          : block.status === 'active' 
+                          ? 'action.hover' 
+                          : 'background.paper',
                         opacity: block.status === 'completed' ? 0.6 : 1,
                         borderLeft: '5px solid',
                         borderColor:
