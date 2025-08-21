@@ -619,7 +619,7 @@ const WorkoutTracker = ({
                                         variant="text"
                                         color="secondary"
                                         size="small"
-                                        onClick={advanceToNextActiveBlock}
+                                        onClick={() => advanceToNextActiveBlock(timerSecondsLeft)}
                                         sx={{ borderRadius: '8px', p: '2px 8px', minWidth: 'auto' }}
                                     >
                                         Skip

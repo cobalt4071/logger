@@ -304,13 +304,12 @@ const App = () => {
   };
 
   // --- Advance Block Handler ---
-  const advanceToNextActiveBlock = useCallback(async () => {
+  const advanceToNextActiveBlock = useCallback(async (currentTime) => {
     const docSnap = await getDoc(sessionDocRef.current);
     if (!docSnap.exists()) return;
 
     const data = docSnap.data();
     const currentBlocks = data.playbackBlocks;
-    const currentTimerSecondsLeft = data.timerSecondsLeft;
     const currentInitialRestDuration = data.initialRestDuration;
 
     const findActiveBlockIndex = currentBlocks.findIndex(block => block.status === 'active');
@@ -320,7 +319,8 @@ const App = () => {
     const activeBlock = newPlaybackBlocks[findActiveBlockIndex];
 
     if (activeBlock.type === 'rest') {
-      activeBlock.actualDuration = currentInitialRestDuration - currentTimerSecondsLeft;
+      const secondsLeft = typeof currentTime === 'number' ? currentTime : data.timerSecondsLeft;
+      activeBlock.actualDuration = currentInitialRestDuration - secondsLeft;
     }
 
     newPlaybackBlocks[findActiveBlockIndex].status = 'completed';
@@ -454,7 +454,7 @@ const App = () => {
       }, 1000);
     } else if (timerSecondsLeft === 0 && isTimerRunning) {
       clearInterval(timerIntervalRef.current);
-      advanceToNextActiveBlock();
+      advanceToNextActiveBlock(timerSecondsLeft);
     }
     // Cleanup function to clear the interval
     return () => clearInterval(timerIntervalRef.current);
