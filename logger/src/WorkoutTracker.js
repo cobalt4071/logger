@@ -433,8 +433,8 @@ const WorkoutTracker = ({
                     <Paper
                       elevation={block.status === 'active' ? 3 : 1}
                       sx={{
-                        mb: 1,
-                        p: 1.5,
+                        mb: 0.5,
+                        p: 0.75,
                         borderRadius: 2,
                         bgcolor: block.status === 'active' ? 'action.hover' : 'background.paper',
                         opacity: block.status === 'completed' ? 0.6 : 1,
