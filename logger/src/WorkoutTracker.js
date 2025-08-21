@@ -416,10 +416,18 @@ const WorkoutTracker = ({
           {playbackBlocks.length > 0 ? (
             <List sx={{ maxHeight: 'calc(100vh - 250px)', overflowY: 'auto', pr: 1 }}>
               {playbackBlocks.map((block, index) => {
+                // Helper to get the exercise name from a block, if available
+                const getExerciseFromBlock = (b) => {
+                  if (!b) return null;
+                  if (b.type === 'plannedSetInstance') return b.exercise;
+                  if (b.type === 'rest' && b.originatingPlannedSet) return b.originatingPlannedSet;
+                  return null;
+                };
+
                 // Determine if this block is an exercise and if its predecessor was a different exercise or not an exercise at all.
                 const isExercise = block.type === 'plannedSetInstance';
                 const prevBlock = index > 0 ? playbackBlocks[index - 1] : null;
-                const shouldRenderHeading = isExercise && (!prevBlock || prevBlock.type !== 'plannedSetInstance' || prevBlock.exercise !== block.exercise);
+                const shouldRenderHeading = isExercise && getExerciseFromBlock(prevBlock) !== block.exercise;
 
                 return (
                   <React.Fragment key={index}>
