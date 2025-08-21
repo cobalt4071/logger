@@ -429,39 +429,6 @@ const WorkoutTracker = ({
                 const prevBlock = index > 0 ? playbackBlocks[index - 1] : null;
                 const shouldRenderHeading = isExercise && getExerciseFromBlock(prevBlock) !== block.exercise;
 
-                const nextBlock = index < playbackBlocks.length - 1 ? playbackBlocks[index + 1] : null;
-                let isNextBlockNewGroup = false;
-                if (nextBlock && nextBlock.type === 'plannedSetInstance') {
-                    if (getExerciseFromBlock(block) !== nextBlock.exercise) {
-                        isNextBlockNewGroup = true;
-                    }
-                }
-                const isLastBlockOverall = !nextBlock;
-
-
-                return (
-                  <React.Fragment key={index}>
-                    {/* Conditionally render the exercise name as a heading */}
-                    {shouldRenderHeading && (
-                      <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, color: 'text.primary', fontWeight: 'bold' }}>
-                        {block.exercise}
-                      </Typography>
-                    )}
-
-                    {playbackBlocks.map((block, index) => {
-                // Helper to get the exercise name from a block, if available
-                const getExerciseFromBlock = (b) => {
-                  if (!b) return null;
-                  if (b.type === 'plannedSetInstance') return b.exercise;
-                  if (b.type === 'rest' && b.originatingPlannedSet) return b.originatingPlannedSet;
-                  return null;
-                };
-
-                // Determine if this block is an exercise and if its predecessor was a different exercise or not an exercise at all.
-                const isExercise = block.type === 'plannedSetInstance';
-                const prevBlock = index > 0 ? playbackBlocks[index - 1] : null;
-                const shouldRenderHeading = isExercise && getExerciseFromBlock(prevBlock) !== block.exercise;
-
                 return (
                   <React.Fragment key={index}>
                     {/* Conditionally render the exercise name as a heading */}
