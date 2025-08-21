@@ -429,6 +429,16 @@ const WorkoutTracker = ({
                 const prevBlock = index > 0 ? playbackBlocks[index - 1] : null;
                 const shouldRenderHeading = isExercise && getExerciseFromBlock(prevBlock) !== block.exercise;
 
+                const nextBlock = index < playbackBlocks.length - 1 ? playbackBlocks[index + 1] : null;
+                let isNextBlockNewGroup = false;
+                if (nextBlock && nextBlock.type === 'plannedSetInstance') {
+                    if (getExerciseFromBlock(block) !== nextBlock.exercise) {
+                        isNextBlockNewGroup = true;
+                    }
+                }
+                const isLastBlockOverall = !nextBlock;
+
+
                 return (
                   <React.Fragment key={index}>
                     {/* Conditionally render the exercise name as a heading */}
@@ -441,10 +451,10 @@ const WorkoutTracker = ({
                     <Paper
                       elevation={block.status === 'active' ? 3 : 1}
                       sx={{
-                        mb: 0.5,
+                        mb: isNextBlockNewGroup || isLastBlockOverall ? 0.5 : 0,
                         py: block.type === 'rest' ? 0.25 : 0.75,
                         px: 0.75,
-                        borderRadius: 2,
+                        borderRadius: 0,
                         bgcolor: block.type === 'rest' 
                           ? '#2c2c2c'
                           : block.status === 'active' 
