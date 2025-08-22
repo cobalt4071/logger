@@ -411,24 +411,25 @@ const WorkoutTracker = ({
       } : null;
 
       let updatedPlaybackBlocks = [...playbackBlocks];
-      let insertionIndexForNewSet = index + 1;
+      let insertionPoint = index + 1; // Default: insert right after the current block
 
-      // If the next block is a rest block associated with the current set,
-      // insert the new set before that rest block.
-      if (index + 1 < playbackBlocks.length &&
-          playbackBlocks[index + 1].type === 'rest' &&
-          playbackBlocks[index + 1].originatingPlannedSet === blockToAddSetAfter.exercise &&
-          playbackBlocks[index + 1].originatingSetNum === blockToAddSetAfter.currentSetNum) {
-        insertionIndexForNewSet = index + 1;
-      } else {
-        insertionIndexForNewSet = index + 1;
+      // Check if there's a rest block immediately after the current set
+      const nextBlock = playbackBlocks[index + 1];
+      const hasRestBlockAfterCurrentSet = nextBlock &&
+                                         nextBlock.type === 'rest' &&
+                                         nextBlock.originatingPlannedSet === blockToAddSetAfter.exercise &&
+                                         nextBlock.originatingSetNum === blockToAddSetAfter.currentSetNum;
+
+      if (hasRestBlockAfterCurrentSet) {
+        insertionPoint = index + 2; // Insert after the current set's rest block
       }
 
-      updatedPlaybackBlocks.splice(insertionIndexForNewSet, 0, newSet);
+      // Insert the new set
+      updatedPlaybackBlocks.splice(insertionPoint, 0, newSet);
 
-      // Insert the new rest block immediately after the newly added set
+      // If a new rest block is needed, insert it right after the new set
       if (newRestBlock) {
-        updatedPlaybackBlocks.splice(insertionIndexForNewSet + 1, 0, newRestBlock);
+        updatedPlaybackBlocks.splice(insertionPoint + 1, 0, newRestBlock);
       }
 
       // Update set numbers for all subsequent sets of the same exercise
