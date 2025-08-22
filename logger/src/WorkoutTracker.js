@@ -393,6 +393,8 @@ const WorkoutTracker = ({
     handleMenuClose();
     if (activeWorkoutSession && userId) {
       const blockToAddSetAfter = playbackBlocks[index];
+      const restTime = blockToAddSetAfter.originalPlannedSet ? blockToAddSetAfter.originalPlannedSet.restTime : 0;
+
       const newSet = {
         ...blockToAddSetAfter,
         currentSetNum: blockToAddSetAfter.currentSetNum + 1,
@@ -400,10 +402,31 @@ const WorkoutTracker = ({
         isEditing: false,
       };
 
-      let updatedPlaybackBlocks = [...playbackBlocks];
-      updatedPlaybackBlocks.splice(index + 1, 0, newSet);
+      const newRestBlock = restTime > 0 ? {
+        type: 'rest',
+        duration: restTime,
+        originatingPlannedSet: blockToAddSetAfter.exercise,
+        originatingSetNum: newSet.currentSetNum,
+        status: 'pending',
+      } : null;
 
-      // Update set numbers for subsequent sets of the same exercise
+      let updatedPlaybackBlocks = [...playbackBlocks];
+      let insertionIndex = index + 1;
+
+      // Check if the next block is a rest block associated with the current set
+      if (index + 1 < playbackBlocks.length &&
+          playbackBlocks[index + 1].type === 'rest' &&
+          playbackBlocks[index + 1].originatingPlannedSet === blockToAddSetAfter.exercise &&
+          playbackBlocks[index + 1].originatingSetNum === blockToAddSetAfter.currentSetNum) {
+        insertionIndex = index + 2; // Insert after the current set's rest block
+      }
+
+      updatedPlaybackBlocks.splice(insertionIndex, 0, newSet);
+      if (newRestBlock) {
+        updatedPlaybackBlocks.splice(insertionIndex + 1, 0, newRestBlock);
+      }
+
+      // Update set numbers for all subsequent sets of the same exercise
       let setCounter = 0;
       updatedPlaybackBlocks = updatedPlaybackBlocks.map(block => {
         if (block.type === 'plannedSetInstance' && block.exercise === newSet.exercise) {
