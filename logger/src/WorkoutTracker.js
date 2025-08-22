@@ -393,7 +393,12 @@ const WorkoutTracker = ({
     handleMenuClose();
     if (activeWorkoutSession && userId) {
       const blockToAddSetAfter = playbackBlocks[index];
-      const restTime = blockToAddSetAfter.originalPlannedSet ? blockToAddSetAfter.originalPlannedSet.restTime : 0;
+      
+      // Find the original planned set to get its restTime
+      const originalPlannedSet = plannedWorkouts.find(
+        (pw) => pw.id === blockToAddSetAfter.originalPlannedSetId
+      );
+      const restTime = originalPlannedSet ? originalPlannedSet.restTime : 0;
 
       const newSet = {
         ...blockToAddSetAfter,
