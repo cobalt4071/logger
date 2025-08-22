@@ -25,6 +25,7 @@ import {
   Accordion, // New import for dropdown
   AccordionSummary, // New import for dropdown
   AccordionDetails, // New import for dropdown
+  Menu, // For the new dropdown menu
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'; // New import for dropdown
 import AddIcon from '@mui/icons-material/Add';
@@ -38,6 +39,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'; // Add this import
+import MoreVertIcon from '@mui/icons-material/MoreVert'; // For the three-dot menu
 
 // Import Firebase modules for Firestore operations
 import { collection, addDoc, query, onSnapshot, orderBy, doc, setDoc, deleteDoc } from "firebase/firestore";
@@ -76,6 +78,10 @@ const WorkoutTracker = ({
 
   // State to store created workouts (fetched from Firestore)
   const [createdWorkouts, setCreatedWorkouts] = useState([]);
+
+  // State for the dropdown menu
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [selectedBlockIndex, setSelectedBlockIndex] = useState(null);
 
   // Add missing refs
   const activeBlockRef = useRef(null);
@@ -373,6 +379,48 @@ const WorkoutTracker = ({
     setPlaybackBlocks(updatedPlaybackBlocks);
   };
 
+  const handleMenuClick = (event, index) => {
+    setAnchorEl(event.currentTarget);
+    setSelectedBlockIndex(index);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setSelectedBlockIndex(null);
+  };
+
+  const handleAddSet = async (index) => {
+    handleMenuClose();
+    if (activeWorkoutSession && userId) {
+      const blockToAddSetAfter = playbackBlocks[index];
+      const newSet = {
+        ...blockToAddSetAfter,
+        currentSetNum: blockToAddSetAfter.currentSetNum + 1,
+        status: 'pending',
+        isEditing: false,
+      };
+
+      let updatedPlaybackBlocks = [...playbackBlocks];
+      updatedPlaybackBlocks.splice(index + 1, 0, newSet);
+
+      // Update set numbers for subsequent sets of the same exercise
+      let setCounter = 0;
+      updatedPlaybackBlocks = updatedPlaybackBlocks.map(block => {
+        if (block.type === 'plannedSetInstance' && block.exercise === newSet.exercise) {
+          setCounter++;
+          return { ...block, currentSetNum: setCounter };
+        }
+        return block;
+      });
+
+      setPlaybackBlocks(updatedPlaybackBlocks);
+
+      const sessionDocRef = doc(db, `artifacts/${appId}/users/${userId}/activeSession/state`);
+      await setDoc(sessionDocRef, { playbackBlocks: updatedPlaybackBlocks }, { merge: true });
+      showSnackbar('New set added!', 'success');
+    }
+  };
+
   // Function to save edited block data to Firestore
   const saveEditedBlock = async (index) => {
     if (activeWorkoutSession && userId) {
@@ -551,7 +599,16 @@ const WorkoutTracker = ({
                                   </Box>
                               )}
                           </Box>
-                          <Box sx={{ width: 40, ml: 1 }} />
+                          <Box sx={{ width: 40, ml: 1 }}>
+                            <IconButton
+                                aria-label="more"
+                                aria-controls="long-menu"
+                                aria-haspopup="true"
+                                onClick={(e) => handleMenuClick(e, index)}
+                              >
+                                <MoreVertIcon />
+                              </IconButton>
+                          </Box>
                           <FormControlLabel
                             control={
                               <Checkbox
@@ -637,6 +694,17 @@ const WorkoutTracker = ({
               This workout has no blocks to play.
             </Typography>
           )}
+          <Menu
+            id="long-menu"
+            anchorEl={anchorEl}
+            keepMounted
+            open={Boolean(anchorEl)}
+            onClose={handleMenuClose}
+          >
+            <MenuItem onClick={() => handleAddSet(selectedBlockIndex)}>
+              Add Set
+            </MenuItem>
+          </Menu>
         </Box>
 
       ) : (
