@@ -411,19 +411,24 @@ const WorkoutTracker = ({
       } : null;
 
       let updatedPlaybackBlocks = [...playbackBlocks];
-      let insertionIndex = index + 1;
+      let insertionIndexForNewSet = index + 1;
 
-      // Check if the next block is a rest block associated with the current set
+      // If the next block is a rest block associated with the current set,
+      // insert the new set before that rest block.
       if (index + 1 < playbackBlocks.length &&
           playbackBlocks[index + 1].type === 'rest' &&
           playbackBlocks[index + 1].originatingPlannedSet === blockToAddSetAfter.exercise &&
           playbackBlocks[index + 1].originatingSetNum === blockToAddSetAfter.currentSetNum) {
-        insertionIndex = index + 2; // Insert after the current set's rest block
+        insertionIndexForNewSet = index + 1;
+      } else {
+        insertionIndexForNewSet = index + 1;
       }
 
-      updatedPlaybackBlocks.splice(insertionIndex, 0, newSet);
+      updatedPlaybackBlocks.splice(insertionIndexForNewSet, 0, newSet);
+
+      // Insert the new rest block immediately after the newly added set
       if (newRestBlock) {
-        updatedPlaybackBlocks.splice(insertionIndex + 1, 0, newRestBlock);
+        updatedPlaybackBlocks.splice(insertionIndexForNewSet + 1, 0, newRestBlock);
       }
 
       // Update set numbers for all subsequent sets of the same exercise
