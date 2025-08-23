@@ -53,6 +53,7 @@ const WorkoutTracker = ({
   advanceToNextActiveBlock,
   setActiveWorkoutSession, setPlaybackBlocks, setIsTimerRunning, setTimerSecondsLeft, setInitialRestDuration,
   handleUpdateRecordedWorkout,
+  handleUpdatePlannedWorkout,
 }) => {
   // State for the current workout being constructed or edited
   const [currentWorkoutName, setCurrentWorkoutName] = useState('');
@@ -458,22 +459,25 @@ const WorkoutTracker = ({
       const exerciseName = newSet.exercise;
       const newTotalSets = updatedPlaybackBlocks.filter(b => b.type === 'plannedSetInstance' && b.exercise === exerciseName).length;
 
-      const originalWorkoutBlocks = activeWorkoutSession.blocks;
-      const newWorkoutBlocks = originalWorkoutBlocks.map(block => {
-          if (block.type === 'plannedSet' && block.plannedSetDetails.exercise === exerciseName) {
-              return {
-                  ...block,
-                  plannedSetDetails: {
-                      ...block.plannedSetDetails,
-                      sets: newTotalSets,
-                  }
-              };
-          }
-          return block;
-      });
+      if (window.confirm(`You now have ${newTotalSets} sets of "${exerciseName}". Do you want to update your planned workout template and the underlying planned set?`)) {
+        const originalWorkoutBlocks = activeWorkoutSession.blocks;
+        const newWorkoutBlocks = originalWorkoutBlocks.map(block => {
+            if (block.type === 'plannedSet' && block.plannedSetDetails.exercise === exerciseName) {
+                return {
+                    ...block,
+                    plannedSetDetails: {
+                        ...block.plannedSetDetails,
+                        sets: newTotalSets,
+                    }
+                };
+            }
+            return block;
+        });
+        handleUpdateRecordedWorkout(activeWorkoutSession.id, newWorkoutBlocks);
 
-      if (window.confirm(`You now have ${newTotalSets} sets of "${exerciseName}". Do you want to update your planned workout template?`)) {
-          handleUpdateRecordedWorkout(activeWorkoutSession.id, newWorkoutBlocks);
+        if (originalPlannedSet) {
+            handleUpdatePlannedWorkout(originalPlannedSet.id, { sets: newTotalSets });
+        }
       }
     }
   };
@@ -521,22 +525,27 @@ const WorkoutTracker = ({
 
       const exerciseName = blockToDelete.exercise;
       const newTotalSets = updatedPlaybackBlocks.filter(b => b.type === 'plannedSetInstance' && b.exercise === exerciseName).length;
-      const originalWorkoutBlocks = activeWorkoutSession.blocks;
-      const newWorkoutBlocks = originalWorkoutBlocks.map(block => {
-          if (block.type === 'plannedSet' && block.plannedSetDetails.exercise === exerciseName) {
-              return {
-                  ...block,
-                  plannedSetDetails: {
-                      ...block.plannedSetDetails,
-                      sets: newTotalSets,
-                  }
-              };
-          }
-          return block;
-      });
+      const originalPlannedSet = plannedWorkouts.find(p => p.id === blockToDelete.originalPlannedSetId);
 
-      if (window.confirm(`You now have ${newTotalSets} sets of "${exerciseName}". Do you want to update your planned workout template?`)) {
-          handleUpdateRecordedWorkout(activeWorkoutSession.id, newWorkoutBlocks);
+      if (window.confirm(`You now have ${newTotalSets} sets of "${exerciseName}". Do you want to update your planned workout template and the underlying planned set?`)) {
+        const originalWorkoutBlocks = activeWorkoutSession.blocks;
+        const newWorkoutBlocks = originalWorkoutBlocks.map(block => {
+            if (block.type === 'plannedSet' && block.plannedSetDetails.exercise === exerciseName) {
+                return {
+                    ...block,
+                    plannedSetDetails: {
+                        ...block.plannedSetDetails,
+                        sets: newTotalSets,
+                    }
+                };
+            }
+            return block;
+        });
+        handleUpdateRecordedWorkout(activeWorkoutSession.id, newWorkoutBlocks);
+
+        if (originalPlannedSet) {
+            handleUpdatePlannedWorkout(originalPlannedSet.id, { sets: newTotalSets });
+        }
       }
     }
   };
@@ -558,24 +567,31 @@ const WorkoutTracker = ({
 
       const changedBlock = updatedPlaybackBlocks[index];
       const exerciseName = changedBlock.exercise;
+      const originalPlannedSet = plannedWorkouts.find(p => p.id === changedBlock.originalPlannedSetId);
 
-      const originalWorkoutBlocks = activeWorkoutSession.blocks;
-      const newWorkoutBlocks = originalWorkoutBlocks.map(block => {
-          if (block.type === 'plannedSet' && block.plannedSetDetails.exercise === exerciseName) {
-              return {
-                  ...block,
-                  plannedSetDetails: {
-                      ...block.plannedSetDetails,
-                      reps: changedBlock.reps,
-                      weight: changedBlock.weight,
-                  }
-              };
-          }
-          return block;
-      });
+      if (originalPlannedSet && (originalPlannedSet.reps !== changedBlock.reps || originalPlannedSet.weight !== changedBlock.weight)) {
+        if (window.confirm(`You changed "${exerciseName}". Do you want to update your planned workout template and the underlying planned set with ${changedBlock.weight}kg and ${changedBlock.reps} reps?`)) {
+            const originalWorkoutBlocks = activeWorkoutSession.blocks;
+            const newWorkoutBlocks = originalWorkoutBlocks.map(block => {
+                if (block.type === 'plannedSet' && block.plannedSetDetails.exercise === exerciseName) {
+                    return {
+                        ...block,
+                        plannedSetDetails: {
+                            ...block.plannedSetDetails,
+                            reps: changedBlock.reps,
+                            weight: changedBlock.weight,
+                        }
+                    };
+                }
+                return block;
+            });
+            handleUpdateRecordedWorkout(activeWorkoutSession.id, newWorkoutBlocks);
 
-      if (window.confirm(`You changed "${exerciseName}". Do you want to update your planned workout template with ${changedBlock.weight}kg and ${changedBlock.reps} reps?`)) {
-          handleUpdateRecordedWorkout(activeWorkoutSession.id, newWorkoutBlocks);
+            handleUpdatePlannedWorkout(originalPlannedSet.id, {
+                weight: changedBlock.weight,
+                reps: changedBlock.reps,
+            });
+        }
       }
     }
   };

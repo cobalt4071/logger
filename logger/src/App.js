@@ -650,6 +650,21 @@ const App = () => {
     }
   };
 
+  const handleUpdatePlannedWorkout = async (workoutId, newData) => {
+    if (!userId) {
+      showSnackbar('Please sign in to update planned workouts.', 'error');
+      return;
+    }
+    const workoutDocRef = doc(db, `artifacts/${appId}/users/${userId}/plannedWorkouts`, workoutId);
+    try {
+      await setDoc(workoutDocRef, newData, { merge: true });
+      showSnackbar('Planned set updated successfully!', 'success');
+    } catch (error) {
+      console.error('Error updating planned workout:', error);
+      showSnackbar(`Failed to update planned set: ${error.message}`, 'error');
+    }
+  };
+
   // Filtered workouts based on search query
   const filteredWorkouts = plannedWorkouts.filter(workout =>
     workout.exercise.toLowerCase().includes(searchQuery.toLowerCase())
@@ -948,6 +963,7 @@ const App = () => {
               setTimerSecondsLeft={setTimerSecondsLeft}
               setInitialRestDuration={setInitialRestDuration}
               handleUpdateRecordedWorkout={handleUpdateRecordedWorkout}
+              handleUpdatePlannedWorkout={handleUpdatePlannedWorkout}
             />
           )}
 
