@@ -426,7 +426,7 @@ const WorkoutTracker = ({
                                          nextBlock.originatingSetNum === blockToAddSetAfter.currentSetNum;
 
       if (isNextBlockCurrentSetsRest) {
-        insertionPoint = index + 2; // Insert after the current set's rest block
+        insertionPoint = index + 2; // Insert after the current set\'s rest block
       }
 
       // Prepare blocks to insert (new set and its rest block)
@@ -453,6 +453,49 @@ const WorkoutTracker = ({
       const sessionDocRef = doc(db, `artifacts/${appId}/users/${userId}/activeSession/state`);
       await setDoc(sessionDocRef, { playbackBlocks: updatedPlaybackBlocks }, { merge: true });
       showSnackbar('New set added!', 'success');
+    }
+  };
+
+  const handleDeleteSet = async (index) => {
+    handleMenuClose();
+    if (activeWorkoutSession && userId) {
+      const blockToDelete = playbackBlocks[index];
+      if (blockToDelete.type !== 'plannedSetInstance') {
+        showSnackbar('This is not a set and cannot be deleted.', 'warning');
+        return;
+      }
+
+      let updatedPlaybackBlocks = [...playbackBlocks];
+      
+      // Check if the next block is the rest block for this set
+      const nextBlock = updatedPlaybackBlocks[index + 1];
+      let blocksToRemove = 1;
+      if (
+        nextBlock &&
+        nextBlock.type === 'rest' &&
+        nextBlock.originatingPlannedSet === blockToDelete.exercise &&
+        nextBlock.originatingSetNum === blockToDelete.currentSetNum
+      ) {
+        blocksToRemove = 2;
+      }
+
+      updatedPlaybackBlocks.splice(index, blocksToRemove);
+
+      // Update set numbers for all subsequent sets of the same exercise
+      let setCounter = 0;
+      updatedPlaybackBlocks = updatedPlaybackBlocks.map(block => {
+        if (block.type === 'plannedSetInstance' && block.exercise === blockToDelete.exercise) {
+          setCounter++;
+          return { ...block, currentSetNum: setCounter };
+        }
+        return block;
+      });
+
+      setPlaybackBlocks(updatedPlaybackBlocks);
+
+      const sessionDocRef = doc(db, `artifacts/${appId}/users/${userId}/activeSession/state`);
+      await setDoc(sessionDocRef, { playbackBlocks: updatedPlaybackBlocks }, { merge: true });
+      showSnackbar('Set deleted.', 'success');
     }
   };
 
@@ -737,6 +780,9 @@ const WorkoutTracker = ({
           >
             <MenuItem onClick={() => handleAddSet(selectedBlockIndex)}>
               Add Set
+            </MenuItem>
+            <MenuItem onClick={() => handleDeleteSet(selectedBlockIndex)}>
+              Delete Set
             </MenuItem>
           </Menu>
         </Box>
