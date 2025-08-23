@@ -811,7 +811,7 @@ const App = () => {
           </Box>
         )}
 
-        <Container maxWidth="md" sx={{ mt: activeWorkoutSession ? 10 : 4, pb: 10 }}>
+        <Container maxWidth="md" sx={{ mt: activeWorkoutSession ? 10 : 4, pb: 20 }}>
           <Box sx={{ my: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           </Box>
 
