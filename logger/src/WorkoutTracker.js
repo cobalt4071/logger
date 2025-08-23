@@ -497,7 +497,7 @@ const WorkoutTracker = ({
           <Divider sx={{ my: 3, borderColor: 'rgba(255,255,255,0.1)' }} />
 
           {playbackBlocks.length > 0 ? (
-            <List sx={{ maxHeight: 'calc(100vh - 250px)', overflowY: 'auto', pr: 1 }}>
+            <List sx={{ pr: 1 }}>
               {playbackBlocks.map((block, index) => {
                 // Helper to get the exercise name from a block, if available
                 const getExerciseFromBlock = (b) => {
