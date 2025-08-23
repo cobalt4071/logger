@@ -52,10 +52,11 @@ const WorkoutTracker = ({
   handleStartWorkoutSession, handleBlockCompletion, handlePauseResume, handleStopWorkout,
   advanceToNextActiveBlock,
   setActiveWorkoutSession, setPlaybackBlocks, setIsTimerRunning, setTimerSecondsLeft, setInitialRestDuration,
+  handleUpdatePlannedWorkout,
 }) => {
   // State for the current workout being constructed or edited
   const [currentWorkoutName, setCurrentWorkoutName] = useState('');
-  const [currentWorkoutBlocks, setCurrentWorkoutBlocks] = useState([]); // Array of { type, data }
+  const [currentWorkoutBlocks, setCurrentWorkoutBlocks] = useState([]); // Array of { type, data } 
   const [isWorkoutNameDialogOpen, setIsWorkoutNameDialogOpen] = useState(false);
   const [workoutNameInput, setWorkoutNameInput] = useState('');
   const [editingCreatedWorkoutId, setEditingCreatedWorkoutId] = useState(null);
@@ -453,6 +454,15 @@ const WorkoutTracker = ({
       const sessionDocRef = doc(db, `artifacts/${appId}/users/${userId}/activeSession/state`);
       await setDoc(sessionDocRef, { playbackBlocks: updatedPlaybackBlocks }, { merge: true });
       showSnackbar('New set added!', 'success');
+
+      const exerciseName = newSet.exercise;
+      const newTotalSets = updatedPlaybackBlocks.filter(b => b.type === 'plannedSetInstance' && b.exercise === exerciseName).length;
+      
+      if (originalPlannedSet && originalPlannedSet.sets !== newTotalSets) {
+          if (window.confirm(`You now have ${newTotalSets} sets of "${exerciseName}". Do you want to update your planned workout?`)) {
+              handleUpdatePlannedWorkout(originalPlannedSet.id, { sets: newTotalSets });
+          }
+      }
     }
   };
 
@@ -496,6 +506,16 @@ const WorkoutTracker = ({
       const sessionDocRef = doc(db, `artifacts/${appId}/users/${userId}/activeSession/state`);
       await setDoc(sessionDocRef, { playbackBlocks: updatedPlaybackBlocks }, { merge: true });
       showSnackbar('Set deleted.', 'success');
+
+      const exerciseName = blockToDelete.exercise;
+      const newTotalSets = updatedPlaybackBlocks.filter(b => b.type === 'plannedSetInstance' && b.exercise === exerciseName).length;
+      const originalPlannedSet = plannedWorkouts.find(p => p.id === blockToDelete.originalPlannedSetId);
+
+      if (originalPlannedSet && originalPlannedSet.sets !== newTotalSets) {
+          if (window.confirm(`You now have ${newTotalSets} sets of "${exerciseName}". Do you want to update your planned workout?`)) {
+              handleUpdatePlannedWorkout(originalPlannedSet.id, { sets: newTotalSets });
+          }
+      }
     }
   };
 
@@ -513,6 +533,18 @@ const WorkoutTracker = ({
       const sessionDocRef = doc(db, `artifacts/${appId}/users/${userId}/activeSession/state`);
       await setDoc(sessionDocRef, { playbackBlocks: updatedPlaybackBlocks }, { merge: true });
       showSnackbar('Workout block updated!', 'success');
+
+      const changedBlock = updatedPlaybackBlocks[index];
+      const originalPlannedSet = plannedWorkouts.find(p => p.id === changedBlock.originalPlannedSetId);
+
+      if (originalPlannedSet && (originalPlannedSet.reps !== changedBlock.reps || originalPlannedSet.weight !== changedBlock.weight)) {
+        if (window.confirm(`You changed "${changedBlock.exercise}". Do you want to update your planned workout with ${changedBlock.weight}kg and ${changedBlock.reps} reps?`)) {
+          handleUpdatePlannedWorkout(originalPlannedSet.id, {
+            weight: changedBlock.weight,
+            reps: changedBlock.reps,
+          });
+        }
+      }
     }
   };
 
