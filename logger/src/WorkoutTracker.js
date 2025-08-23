@@ -559,7 +559,14 @@ const WorkoutTracker = ({
                       {block.type === 'plannedSetInstance' && (
                         <>
                           <ListItemIcon sx={{ minWidth: '32px', mr: 1, alignSelf: 'center' }}>
-                            <FitnessCenterIcon fontSize="medium" color="success" />
+                            <IconButton
+                                aria-label="more"
+                                aria-controls="long-menu"
+                                aria-haspopup="true"
+                                onClick={(e) => handleMenuClick(e, index)}
+                              >
+                                <MoreVertIcon />
+                              </IconButton>
                           </ListItemIcon>
                           <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'space-around', alignItems: 'center', gap: 1 }}>
                               <Typography variant="subtitle1" sx={{ fontWeight: 'bold', width: '60px', textAlign: 'center' }}>
@@ -635,14 +642,6 @@ const WorkoutTracker = ({
                               )}
                           </Box>
                           <Box sx={{ width: 40, ml: 1 }}>
-                            <IconButton
-                                aria-label="more"
-                                aria-controls="long-menu"
-                                aria-haspopup="true"
-                                onClick={(e) => handleMenuClick(e, index)}
-                              >
-                                <MoreVertIcon />
-                              </IconButton>
                           </Box>
                           <FormControlLabel
                             control={
