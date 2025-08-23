@@ -635,14 +635,14 @@ const App = () => {
     }
   };
 
-  const handleUpdatePlannedWorkout = async (workoutId, newData) => {
+  const handleUpdateRecordedWorkout = async (workoutId, newBlocks) => {
     if (!userId) {
       showSnackbar('Please sign in to update planned workouts.', 'error');
       return;
     }
-    const workoutDocRef = doc(db, `artifacts/${appId}/users/${userId}/plannedWorkouts`, workoutId);
+    const workoutDocRef = doc(db, `artifacts/${appId}/users/${userId}/recordedWorkouts`, workoutId);
     try {
-      await setDoc(workoutDocRef, newData, { merge: true });
+      await setDoc(workoutDocRef, { blocks: newBlocks }, { merge: true });
       showSnackbar('Planned workout updated successfully!', 'success');
     } catch (error) {
       console.error('Error updating planned workout:', error);
@@ -947,7 +947,7 @@ const App = () => {
               setIsTimerRunning={setIsTimerRunning}
               setTimerSecondsLeft={setTimerSecondsLeft}
               setInitialRestDuration={setInitialRestDuration}
-              handleUpdatePlannedWorkout={handleUpdatePlannedWorkout}
+              handleUpdateRecordedWorkout={handleUpdateRecordedWorkout}
             />
           )}
 
