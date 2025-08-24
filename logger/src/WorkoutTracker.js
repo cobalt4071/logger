@@ -800,7 +800,11 @@ const WorkoutTracker = ({
                                           '& .MuiOutlinedInput-root': {
                                               borderRadius: '4px',
                                               height: '40px',
-                                              backgroundColor: block.isRir ? 'rgba(255, 215, 0, 0.2)' : 'transparent', // Gold-ish color for RIR
+                                              backgroundColor: 'transparent',
+                                          },
+                                          '& .MuiInputBase-input': {
+                                            color: block.isRir ? 'text.secondary' : 'text.primary',
+                                            fontStyle: block.isRir ? 'italic' : 'normal',
                                           },
                                       }}
                                   />
@@ -817,10 +821,10 @@ const WorkoutTracker = ({
                                           borderColor: 'divider',
                                           borderRadius: '4px',
                                           cursor: block.status === 'active' ? 'pointer' : 'default',
-                                          backgroundColor: isValidRir(block.reps) ? 'rgba(255, 215, 0, 0.2)' : 'transparent',
+                                          backgroundColor: 'transparent',
                                       }}
                                   >
-                                      <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>{block.reps}</Typography>
+                                      <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: isValidRir(block.reps) ? 'text.secondary' : 'text.primary', fontStyle: isValidRir(block.reps) ? 'italic' : 'normal' }}>{block.reps}</Typography>
                                   </Box>
                               )}
                           </Box>

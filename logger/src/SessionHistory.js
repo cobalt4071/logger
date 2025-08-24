@@ -15,6 +15,17 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import TimerIcon from '@mui/icons-material/Timer';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 
+const isValidRir = (value) => {
+  if (typeof value === 'string' && value.toLowerCase().endsWith(' rir')) {
+    const parts = value.toLowerCase().split(' ');
+    if (parts.length === 2 && parts[1] === 'rir') {
+      const num = parseInt(parts[0]);
+      return !isNaN(num) && num >= 0;
+    }
+  }
+  return false;
+};
+
 const SessionHistory = ({ 
   sessionHistory, 
   formatDate, 
@@ -102,34 +113,42 @@ const SessionHistory = ({
                     <AccordionDetails sx={{ pt: 0 }}>
                         <Divider sx={{ my: 1, borderColor: 'rgba(255,255,255,0.1)' }} />
                         {session.blocks && session.blocks.map((block, blockIndex) => {
-                            let blockContent;
-                            switch (block.type) {
-                                case 'plannedSetInstance':
-                                    blockContent = `${block.exercise}: ${block.reps} ${typeof block.reps === 'string' && block.reps.includes('rir') ? '' : 'reps'} @ ${block.weight}kg`;
-                                    break;
-                                case 'rest':
-                                    const restColor = block.actualDuration < block.duration ? 'warning.main' : 'success.main';
-                                    blockContent = (
-                                        <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
-                                            <TimerIcon sx={{ fontSize: '1rem', mr: 0.5, color: 'info.main' }} />
-                                            <Typography variant="body2" component="span">
-                                                Rest: 
-                                            </Typography>
-                                            <Typography variant="body2" component="span" sx={{ color: restColor, ml: 0.5 }}>
-                                                {block.actualDuration}s
-                                            </Typography>
-                                            <Typography variant="body2" component="span" sx={{ color: 'text.secondary', ml: 0.5 }}>
-                                                (planned: {block.duration}s)
-                                            </Typography>
+                            if (block.type === 'plannedSetInstance') {
+                                const isRir = isValidRir(block.reps);
+                                return (
+                                    <Typography key={blockIndex} variant="body2" color="text.secondary" sx={{ ml: 1, my: 0.5 }}>
+                                        - {block.exercise}:{' '}
+                                        <Box component="span" sx={{ fontStyle: isRir ? 'italic' : 'normal', color: isRir ? 'text.disabled' : 'text.primary' }}>
+                                            {block.reps}
                                         </Box>
-                                    );
-                                    break;
-                                case 'note':
-                                    blockContent = `Note: "${block.text}"`;
-                                    break;
-                                default:
-                                    blockContent = 'Unknown block';
+                                        {isRir ? '' : ' reps'} @ {block.weight}kg
+                                    </Typography>
+                                );
                             }
+
+                            let blockContent;
+                            if (block.type === 'rest') {
+                                const restColor = block.actualDuration < block.duration ? 'warning.main' : 'success.main';
+                                blockContent = (
+                                    <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
+                                        <TimerIcon sx={{ fontSize: '1rem', mr: 0.5, color: 'info.main' }} />
+                                        <Typography variant="body2" component="span">
+                                            Rest: 
+                                        </Typography>
+                                        <Typography variant="body2" component="span" sx={{ color: restColor, ml: 0.5 }}>
+                                            {block.actualDuration}s
+                                        </Typography>
+                                        <Typography variant="body2" component="span" sx={{ color: 'text.secondary', ml: 0.5 }}>
+                                            (planned: {block.duration}s)
+                                        </Typography>
+                                    </Box>
+                                );
+                            } else if (block.type === 'note') {
+                                blockContent = `Note: "${block.text}"`;
+                            } else {
+                                blockContent = 'Unknown block';
+                            }
+                            
                             return (
                                 <Typography key={blockIndex} variant="body2" color="textSecondary" sx={{ ml: 1, my: 0.5 }}>
                                     - {blockContent}
