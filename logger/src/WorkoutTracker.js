@@ -57,7 +57,7 @@ const WorkoutTracker = ({
 }) => {
   // State for the current workout being constructed or edited
   const [currentWorkoutName, setCurrentWorkoutName] = useState('');
-  const [currentWorkoutBlocks, setCurrentWorkoutBlocks] = useState([]); // Array of { type, data } 
+  const [currentWorkoutBlocks, setCurrentWorkoutBlocks] = useState([]); // Array of { type, data }
   const [isWorkoutNameDialogOpen, setIsWorkoutNameDialogOpen] = useState(false);
   const [workoutNameInput, setWorkoutNameInput] = useState('');
   const [editingCreatedWorkoutId, setEditingCreatedWorkoutId] = useState(null);
@@ -70,6 +70,12 @@ const WorkoutTracker = ({
   // States for controlling dialogs
   const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
   const [isRestDialogOpen, setIsRestDialogOpen] = useState(false);
+  const [confirmationDialogOpen, setConfirmationDialogOpen] = useState(false);
+  const [confirmationDetails, setConfirmationDetails] = useState({
+    title: '',
+    description: '',
+    onConfirm: () => {},
+  });
 
   // Refs for drag and drop functionality
   const dragItem = useRef(null);
@@ -87,6 +93,20 @@ const WorkoutTracker = ({
 
   // Add missing refs
   const activeBlockRef = useRef(null);
+
+  const handleOpenConfirmationDialog = (title, description, onConfirm) => {
+    setConfirmationDetails({ title, description, onConfirm });
+    setConfirmationDialogOpen(true);
+  };
+
+  const handleCloseConfirmationDialog = () => {
+    setConfirmationDialogOpen(false);
+  };
+
+  const handleConfirm = () => {
+    confirmationDetails.onConfirm();
+    handleCloseConfirmationDialog();
+  };
 
   // Add missing helper
   const formatDate = (isoString) => {
@@ -459,7 +479,7 @@ const WorkoutTracker = ({
       const exerciseName = newSet.exercise;
       const newTotalSets = updatedPlaybackBlocks.filter(b => b.type === 'plannedSetInstance' && b.exercise === exerciseName).length;
 
-      if (window.confirm(`You now have ${newTotalSets} sets of "${exerciseName}". Do you want to update your planned workout template and the underlying planned set?`)) {
+      const onConfirm = () => {
         const originalWorkoutBlocks = activeWorkoutSession.blocks;
         const newWorkoutBlocks = originalWorkoutBlocks.map(block => {
             if (block.type === 'plannedSet' && block.plannedSetDetails.exercise === exerciseName) {
@@ -478,7 +498,13 @@ const WorkoutTracker = ({
         if (originalPlannedSet) {
             handleUpdatePlannedWorkout(originalPlannedSet.id, { sets: newTotalSets });
         }
-      }
+      };
+
+      handleOpenConfirmationDialog(
+        'Update Plan?',
+        `You now have ${newTotalSets} sets of "${exerciseName}". Do you want to update your planned workout template and the underlying planned set?`,
+        onConfirm
+      );
     }
   };
 
@@ -527,7 +553,7 @@ const WorkoutTracker = ({
       const newTotalSets = updatedPlaybackBlocks.filter(b => b.type === 'plannedSetInstance' && b.exercise === exerciseName).length;
       const originalPlannedSet = plannedWorkouts.find(p => p.id === blockToDelete.originalPlannedSetId);
 
-      if (window.confirm(`You now have ${newTotalSets} sets of "${exerciseName}". Do you want to update your planned workout template and the underlying planned set?`)) {
+      const onConfirm = () => {
         const originalWorkoutBlocks = activeWorkoutSession.blocks;
         const newWorkoutBlocks = originalWorkoutBlocks.map(block => {
             if (block.type === 'plannedSet' && block.plannedSetDetails.exercise === exerciseName) {
@@ -546,7 +572,13 @@ const WorkoutTracker = ({
         if (originalPlannedSet) {
             handleUpdatePlannedWorkout(originalPlannedSet.id, { sets: newTotalSets });
         }
-      }
+      };
+
+      handleOpenConfirmationDialog(
+        'Update Plan?',
+        `You now have ${newTotalSets} sets of "${exerciseName}". Do you want to update your planned workout template and the underlying planned set?`,
+        onConfirm
+      );
     }
   };
 
@@ -570,7 +602,7 @@ const WorkoutTracker = ({
       const originalPlannedSet = plannedWorkouts.find(p => p.id === changedBlock.originalPlannedSetId);
 
       if (originalPlannedSet && (originalPlannedSet.reps !== changedBlock.reps || originalPlannedSet.weight !== changedBlock.weight)) {
-        if (window.confirm(`You changed "${exerciseName}". Do you want to update your planned workout template and the underlying planned set with ${changedBlock.weight}kg and ${changedBlock.reps} reps?`)) {
+        const onConfirm = () => {
             const originalWorkoutBlocks = activeWorkoutSession.blocks;
             const newWorkoutBlocks = originalWorkoutBlocks.map(block => {
                 if (block.type === 'plannedSet' && block.plannedSetDetails.exercise === exerciseName) {
@@ -591,7 +623,13 @@ const WorkoutTracker = ({
                 weight: changedBlock.weight,
                 reps: changedBlock.reps,
             });
-        }
+        };
+
+        handleOpenConfirmationDialog(
+            'Update Plan?',
+            `You changed "${exerciseName}". Do you want to update your planned workout template and the underlying planned set with ${changedBlock.weight}kg and ${changedBlock.reps} reps?`,
+            onConfirm
+        );
       }
     }
   };
@@ -1161,7 +1199,20 @@ const WorkoutTracker = ({
             </DialogActions>
           </Dialog>
 
-          
+          <Dialog open={confirmationDialogOpen} onClose={handleCloseConfirmationDialog}>
+            <DialogTitle>{confirmationDetails.title}</DialogTitle>
+            <DialogContent>
+              <Typography>{confirmationDetails.description}</Typography>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleCloseConfirmationDialog} color="secondary">
+                Cancel
+              </Button>
+              <Button onClick={handleConfirm} color="primary">
+                Confirm
+              </Button>
+            </DialogActions>
+          </Dialog>
 
           {/* New "Created Workouts" list using Accordion */}
           <Box sx={{ mt: 4, mb: 2, p: 1, borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
