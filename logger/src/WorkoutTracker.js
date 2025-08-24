@@ -790,7 +790,8 @@ const WorkoutTracker = ({
                               {block.isEditing ? (
                                   <TextField
                                       type="text" // Change type to text to allow "rir"
-                                      value={block.reps}
+                                      placeholder={isValidRir(block.reps) ? block.reps : undefined}
+                                      value={isValidRir(block.reps) ? '' : block.reps}
                                       onChange={(e) => handleValueChange(index, 'reps', e.target.value)}
                                       onBlur={() => saveEditedBlock(index)}
                                       onKeyPress={(e) => { if (e.key === 'Enter') saveEditedBlock(index); }}
@@ -800,11 +801,10 @@ const WorkoutTracker = ({
                                           '& .MuiOutlinedInput-root': {
                                               borderRadius: '4px',
                                               height: '40px',
-                                              backgroundColor: 'transparent',
                                           },
-                                          '& .MuiInputBase-input': {
-                                            color: block.isRir ? 'text.secondary' : 'text.primary',
-                                            fontStyle: block.isRir ? 'italic' : 'normal',
+                                          '& .MuiInputBase-input::placeholder': {
+                                            color: 'text.secondary',
+                                            opacity: 1,
                                           },
                                       }}
                                   />
@@ -821,10 +821,9 @@ const WorkoutTracker = ({
                                           borderColor: 'divider',
                                           borderRadius: '4px',
                                           cursor: block.status === 'active' ? 'pointer' : 'default',
-                                          backgroundColor: 'transparent',
                                       }}
                                   >
-                                      <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: isValidRir(block.reps) ? 'text.secondary' : 'text.primary', fontStyle: isValidRir(block.reps) ? 'italic' : 'normal' }}>{block.reps}</Typography>
+                                      <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: isValidRir(block.reps) ? 'text.secondary' : 'text.primary' }}>{block.reps}</Typography>
                                   </Box>
                               )}
                           </Box>

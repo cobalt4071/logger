@@ -118,7 +118,7 @@ const SessionHistory = ({
                                 return (
                                     <Typography key={blockIndex} variant="body2" color="text.secondary" sx={{ ml: 1, my: 0.5 }}>
                                         - {block.exercise}:{' '}
-                                        <Box component="span" sx={{ fontStyle: isRir ? 'italic' : 'normal', color: isRir ? 'text.disabled' : 'text.primary' }}>
+                                        <Box component="span" sx={{ color: isRir ? 'text.disabled' : 'text.primary' }}>
                                             {block.reps}
                                         </Box>
                                         {isRir ? '' : ' reps'} @ {block.weight}kg
