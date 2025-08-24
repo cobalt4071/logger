@@ -44,6 +44,18 @@ import MoreVertIcon from '@mui/icons-material/MoreVert'; // For the three-dot me
 // Import Firebase modules for Firestore operations
 import { collection, addDoc, query, onSnapshot, orderBy, doc, setDoc, deleteDoc } from "firebase/firestore";
 
+// Add a new helper function to validate RIR format
+const isValidRir = (value) => {
+  if (typeof value === 'string' && value.toLowerCase().endsWith(' rir')) {
+    const parts = value.toLowerCase().split(' ');
+    if (parts.length === 2 && parts[1] === 'rir') {
+      const num = parseInt(parts[0]);
+      return !isNaN(num) && num >= 0;
+    }
+  }
+  return false;
+};
+
 
 // WorkoutTracker component
 const WorkoutTracker = ({ 
@@ -394,6 +406,14 @@ const WorkoutTracker = ({
   const handleValueChange = (index, field, value) => {
     const updatedPlaybackBlocks = playbackBlocks.map((block, i) => {
       if (i === index) {
+        if (field === 'reps') {
+          if (isValidRir(value)) {
+            return { ...block, [field]: value, isRir: true };
+          }
+          // Try to parse as a number, otherwise keep the string value for further validation
+          const numericValue = parseInt(value);
+          return { ...block, [field]: isNaN(numericValue) ? value : numericValue, isRir: false };
+        }
         return { ...block, [field]: value };
       }
       return block;
@@ -769,9 +789,9 @@ const WorkoutTracker = ({
                               )}
                               {block.isEditing ? (
                                   <TextField
-                                      type="number"
+                                      type="text" // Change type to text to allow "rir"
                                       value={block.reps}
-                                      onChange={(e) => handleValueChange(index, 'reps', parseInt(e.target.value))}
+                                      onChange={(e) => handleValueChange(index, 'reps', e.target.value)}
                                       onBlur={() => saveEditedBlock(index)}
                                       onKeyPress={(e) => { if (e.key === 'Enter') saveEditedBlock(index); }}
                                       size="small"
@@ -780,6 +800,7 @@ const WorkoutTracker = ({
                                           '& .MuiOutlinedInput-root': {
                                               borderRadius: '4px',
                                               height: '40px',
+                                              backgroundColor: block.isRir ? 'rgba(255, 215, 0, 0.2)' : 'transparent', // Gold-ish color for RIR
                                           },
                                       }}
                                   />
@@ -796,6 +817,7 @@ const WorkoutTracker = ({
                                           borderColor: 'divider',
                                           borderRadius: '4px',
                                           cursor: block.status === 'active' ? 'pointer' : 'default',
+                                          backgroundColor: isValidRir(block.reps) ? 'rgba(255, 215, 0, 0.2)' : 'transparent',
                                       }}
                                   >
                                       <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>{block.reps}</Typography>

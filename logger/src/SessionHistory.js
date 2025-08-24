@@ -105,7 +105,7 @@ const SessionHistory = ({
                             let blockContent;
                             switch (block.type) {
                                 case 'plannedSetInstance':
-                                    blockContent = `${block.exercise}: ${block.reps} reps @ ${block.weight}kg`;
+                                    blockContent = `${block.exercise}: ${block.reps} ${typeof block.reps === 'string' && block.reps.includes('rir') ? '' : 'reps'} @ ${block.weight}kg`;
                                     break;
                                 case 'rest':
                                     const restColor = block.actualDuration < block.duration ? 'warning.main' : 'success.main';

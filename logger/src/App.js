@@ -50,6 +50,7 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  getDocs,
   orderBy,
 } from "firebase/firestore";
 import {
@@ -85,6 +86,18 @@ const auth = getAuth(app);
 
 // Global variables for Canvas environment - MANDATORY to use
 const appId = typeof window !== 'undefined' && window.__app_id ? window.__app_id : 'default-app-id';
+
+// Add a new helper function to validate RIR format
+const isValidRir = (value) => {
+  if (typeof value === 'string' && value.toLowerCase().endsWith(' rir')) {
+    const parts = value.toLowerCase().split(' ');
+    if (parts.length === 2 && parts[1] === 'rir') {
+      const num = parseInt(parts[0]);
+      return !isNaN(num) && num >= 0;
+    }
+  }
+  return false;
+};
 
 // Define the dark theme
 const darkTheme = createTheme({
@@ -187,6 +200,8 @@ const App = () => {
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [currentTab, setCurrentTab] = useState('sets');
   const [isFinishConfirmDialogOpen, setIsFinishConfirmDialogOpen] = useState(false);
+  const [isImportConfirmDialogOpen, setIsImportConfirmDialogOpen] = useState(false);
+  const [importedData, setImportedData] = useState(null);
 
   // --- Snackbar State and Function (Now only defined once) ---
   const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -534,31 +549,61 @@ const App = () => {
     const reader = new FileReader();
     reader.onload = async (e) => {
       try {
-        const importedData = JSON.parse(e.target.result);
-
-        if (importedData && importedData.plannedWorkouts && importedData.sessionHistory) {
-          if(window.confirm('Are you sure you want to import this data? This will add the imported workouts and sessions to your existing data.')) {
-            const plannedWorkoutsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/plannedWorkouts`);
-            for (const workout of importedData.plannedWorkouts) {
-              await addDoc(plannedWorkoutsCollectionRef, workout);
-            }
-
-            const sessionHistoryCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/sessionHistory`);
-            for (const session of importedData.sessionHistory) {
-              await addDoc(sessionHistoryCollectionRef, session);
-            }
-
-            showSnackbar('Data imported successfully!', 'success');
-          }
+        const data = JSON.parse(e.target.result);
+        if (data && data.plannedWorkouts && data.sessionHistory) {
+          setImportedData(data);
+          setIsImportConfirmDialogOpen(true);
         } else {
           showSnackbar('Invalid import file format.', 'error');
         }
       } catch (error) {
-        console.error('Error importing data:', error);
-        showSnackbar(`Error importing data: ${error.message}`, 'error');
+        console.error('Error reading file:', error);
+        showSnackbar(`Error reading import file: ${error.message}`, 'error');
       }
     };
     reader.readAsText(file);
+    // Reset file input so the same file can be selected again
+    event.target.value = null;
+  };
+
+  const handleImportConfirm = async (importType) => {
+    setIsImportConfirmDialogOpen(false);
+    if (!importedData) return;
+
+    try {
+      if (importType === 'replace') {
+        // Delete existing data first
+        const plannedWorkoutsQuery = query(collection(db, `artifacts/${appId}/users/${userId}/plannedWorkouts`));
+        const plannedWorkoutsSnapshot = await getDocs(plannedWorkoutsQuery);
+        for (const doc of plannedWorkoutsSnapshot.docs) {
+          await deleteDoc(doc.ref);
+        }
+
+        const sessionHistoryQuery = query(collection(db, `artifacts/${appId}/users/${userId}/sessionHistory`));
+        const sessionHistorySnapshot = await getDocs(sessionHistoryQuery);
+        for (const doc of sessionHistorySnapshot.docs) {
+          await deleteDoc(doc.ref);
+        }
+      }
+
+      // Add new data
+      const plannedWorkoutsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/plannedWorkouts`);
+      for (const workout of importedData.plannedWorkouts) {
+        await addDoc(plannedWorkoutsCollectionRef, workout);
+      }
+
+      const sessionHistoryCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/sessionHistory`);
+      for (const session of importedData.sessionHistory) {
+        await addDoc(sessionHistoryCollectionRef, session);
+      }
+
+      showSnackbar('Data imported successfully!', 'success');
+    } catch (error) {
+      console.error('Error importing data:', error);
+      showSnackbar(`Error importing data: ${error.message}`, 'error');
+    } finally {
+      setImportedData(null);
+    }
   };
 
   // Function to close Snackbar
@@ -614,8 +659,8 @@ const App = () => {
       showSnackbar('Sets must be a positive number.', 'warning');
       return;
     }
-    if (isNaN(parseInt(reps)) || parseInt(reps) <= 0) {
-      showSnackbar('Reps must be a positive number.', 'warning');
+    if (!isValidRir(reps) && (isNaN(parseInt(reps)) || parseInt(reps) <= 0)) {
+      showSnackbar('Reps must be a positive number or in "X rir" format.', 'warning');
       return;
     }
     if (isNaN(parseFloat(weight)) || parseFloat(weight) < 0) {
@@ -639,7 +684,7 @@ const App = () => {
     const workoutData = {
       exercise: exercise.trim(),
       sets: parseInt(sets),
-      reps: parseInt(reps),
+      reps: isValidRir(reps) ? reps : parseInt(reps),
       weight: parseFloat(weight),
       restTime: parseInt(restTime),
       userId: userId,
@@ -1153,10 +1198,14 @@ const App = () => {
                 <TextField
                   label="Reps"
                   variant="outlined"
-                  type="number"
+                  type="text"
                   value={reps}
                   onChange={(e) => setReps(e.target.value)}
-                  inputProps={{ min: 1 }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                        backgroundColor: isValidRir(reps) ? 'rgba(255, 215, 0, 0.2)' : 'transparent',
+                    },
+                  }}
                   fullWidth
                 />
                 <TextField
@@ -1210,6 +1259,24 @@ const App = () => {
               </Button>
               <Button onClick={handleFinishWorkoutAndSave} color="primary">
                 Finish
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          <Dialog open={isImportConfirmDialogOpen} onClose={() => setIsImportConfirmDialogOpen(false)}>
+            <DialogTitle>Import Data</DialogTitle>
+            <DialogContent>
+              <Typography>How would you like to import the data?</Typography>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => handleImportConfirm('add')} color="primary">
+                Add to Existing
+              </Button>
+              <Button onClick={() => handleImportConfirm('replace')} color="secondary">
+                Replace Existing
+              </Button>
+              <Button onClick={() => setIsImportConfirmDialogOpen(false)}>
+                Cancel
               </Button>
             </DialogActions>
           </Dialog>
