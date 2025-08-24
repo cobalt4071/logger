@@ -621,35 +621,41 @@ const WorkoutTracker = ({
       const exerciseName = changedBlock.exercise;
       const originalPlannedSet = plannedWorkouts.find(p => p.id === changedBlock.originalPlannedSetId);
 
-      if (originalPlannedSet && (originalPlannedSet.reps !== changedBlock.reps || originalPlannedSet.weight !== changedBlock.weight)) {
-        const onConfirm = () => {
-            const originalWorkoutBlocks = activeWorkoutSession.blocks;
-            const newWorkoutBlocks = originalWorkoutBlocks.map(block => {
-                if (block.type === 'plannedSet' && block.plannedSetDetails.exercise === exerciseName) {
-                    return {
-                        ...block,
-                        plannedSetDetails: {
-                            ...block.plannedSetDetails,
-                            reps: changedBlock.reps,
-                            weight: changedBlock.weight,
-                        }
-                    };
-                }
-                return block;
-            });
-            handleUpdateRecordedWorkout(activeWorkoutSession.id, newWorkoutBlocks);
+      if (originalPlannedSet) {
+        const repsChanged = originalPlannedSet.reps !== changedBlock.reps;
+        const weightChanged = originalPlannedSet.weight !== changedBlock.weight;
+        const isRirChange = repsChanged && (isValidRir(originalPlannedSet.reps) || isValidRir(changedBlock.reps));
 
-            handleUpdatePlannedWorkout(originalPlannedSet.id, {
-                weight: changedBlock.weight,
-                reps: changedBlock.reps,
-            });
-        };
+        if ((weightChanged || repsChanged) && !isRirChange) {
+          const onConfirm = () => {
+              const originalWorkoutBlocks = activeWorkoutSession.blocks;
+              const newWorkoutBlocks = originalWorkoutBlocks.map(block => {
+                  if (block.type === 'plannedSet' && block.plannedSetDetails.exercise === exerciseName) {
+                      return {
+                          ...block,
+                          plannedSetDetails: {
+                              ...block.plannedSetDetails,
+                              reps: changedBlock.reps,
+                              weight: changedBlock.weight,
+                          }
+                      };
+                  }
+                  return block;
+              });
+              handleUpdateRecordedWorkout(activeWorkoutSession.id, newWorkoutBlocks);
 
-        handleOpenConfirmationDialog(
-            'Update Plan?',
-            `You changed "${exerciseName}". Do you want to update your planned workout template and the underlying planned set with ${changedBlock.weight}kg and ${changedBlock.reps} reps?`,
-            onConfirm
-        );
+              handleUpdatePlannedWorkout(originalPlannedSet.id, {
+                  weight: changedBlock.weight,
+                  reps: changedBlock.reps,
+              });
+          };
+
+          handleOpenConfirmationDialog(
+              'Update Plan?',
+              `You changed "${exerciseName}". Do you want to update your planned workout template and the underlying planned set with ${changedBlock.weight}kg and ${changedBlock.reps} reps?`,
+              onConfirm
+          );
+        }
       }
     }
   };
