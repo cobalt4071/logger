@@ -496,6 +496,71 @@ const App = () => {
     }
   };
 
+  const handleExportData = () => {
+    if (!userId) {
+      showSnackbar('Please sign in to export your data.', 'error');
+      return;
+    }
+
+    const dataToExport = {
+      plannedWorkouts: plannedWorkouts,
+      sessionHistory: sessionHistory,
+    };
+
+    const jsonString = JSON.stringify(dataToExport, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `workout_logger_export_${new Date().toISOString()}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showSnackbar('Data exported successfully!', 'success');
+  };
+
+  const handleImportData = (event) => {
+    if (!userId) {
+      showSnackbar('Please sign in to import data.', 'error');
+      return;
+    }
+
+    const file = event.target.files[0];
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const importedData = JSON.parse(e.target.result);
+
+        if (importedData && importedData.plannedWorkouts && importedData.sessionHistory) {
+          if(window.confirm('Are you sure you want to import this data? This will add the imported workouts and sessions to your existing data.')) {
+            const plannedWorkoutsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/plannedWorkouts`);
+            for (const workout of importedData.plannedWorkouts) {
+              await addDoc(plannedWorkoutsCollectionRef, workout);
+            }
+
+            const sessionHistoryCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/sessionHistory`);
+            for (const session of importedData.sessionHistory) {
+              await addDoc(sessionHistoryCollectionRef, session);
+            }
+
+            showSnackbar('Data imported successfully!', 'success');
+          }
+        } else {
+          showSnackbar('Invalid import file format.', 'error');
+        }
+      } catch (error) {
+        console.error('Error importing data:', error);
+        showSnackbar(`Error importing data: ${error.message}`, 'error');
+      }
+    };
+    reader.readAsText(file);
+  };
+
   // Function to close Snackbar
   const handleCloseSnackbar = (event, reason) => {
     if (reason === 'clickaway') {
@@ -1021,6 +1086,34 @@ const App = () => {
                       </Button>
                   </Box>
               )}
+
+              <Box sx={{ mt: 4, borderTop: '1px solid #444', pt: 3 }}>
+                <Typography variant="h6" sx={{ color: 'text.primary', mb: 2 }}>
+                  Data Management
+                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
+                  <Button
+                    variant="contained"
+                    onClick={handleExportData}
+                    disabled={!userId}
+                  >
+                    Export Data
+                  </Button>
+                  <Button
+                    variant="contained"
+                    component="label"
+                    disabled={!userId}
+                  >
+                    Import Data
+                    <input
+                      type="file"
+                      hidden
+                      onChange={handleImportData}
+                      accept=".json"
+                    />
+                  </Button>
+                </Box>
+              </Box>
             </Paper>
           )}
 
